@@ -57,8 +57,8 @@ spec:
         operator: NotIn
         values:
           - account-server      # mesh callee  (auth, moderation)
-          - social-graph-server # mesh callee  (counter-worker, timeline)
-          - post-server         # mesh callee  (search)
+          - social-graph-server # mesh callee  (counter-worker, timeline, post, comment)
+          - post-server         # mesh callee  (search, comment)
           - profile-server      # mesh callee  (search)
           - moderation-server   # mesh callee  (media Screen)
           - auth-server         # mesh callee  (realtime JWKS)
@@ -169,7 +169,7 @@ spec:
     - from:
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [counter-worker, timeline-server] }
+              - { key: app, operator: In, values: [counter-worker, timeline-server, post-server, comment-server] }
       ports:
         - { protocol: TCP, port: 50053 }
 ---
@@ -185,8 +185,8 @@ spec:
   ingress:
     - from:
         - podSelector:
-            matchLabels:
-              app: search-server
+            matchExpressions:
+              - { key: app, operator: In, values: [search-server, comment-server] }
       ports:
         - { protocol: TCP, port: 50056 }
 ---
