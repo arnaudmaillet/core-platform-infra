@@ -54,6 +54,15 @@ dependency "acm_cert" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
+# Client-edge WAF Web ACL: its ARN is set on the client-edge Ingress
+# (alb.ingress.kubernetes.io/wafv2-acl-arn) through the CMP, so the ALB is never
+# created unshielded.
+dependency "waf_edge" {
+  config_path                             = "../../security/waf-edge"
+  mock_outputs                            = { web_acl_arn = "arn:aws:wafv2:us-east-1:000000000000:regional/webacl/mock/00000000-0000-0000-0000-000000000000" }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
 # Ordering-only: the workload ExternalSecrets (synced by ArgoCD) pull the app
 # secrets this unit seeds, so it must apply before ArgoCD brings up the fleet.
 # No outputs consumed here.
@@ -104,6 +113,7 @@ inputs = {
 
   # --- Security & Certificates ---
   ssl_certificate_arn = dependency.acm_cert.outputs.certificate_arn
+  waf_edge_acl_arn    = dependency.waf_edge.outputs.web_acl_arn
 
   # --- CMP envsubst values (data-store endpoints for the workload overlay) ---
   msk_bootstrap_brokers = dependency.msk.outputs.bootstrap_brokers_sasl_scram

@@ -27,3 +27,13 @@
   value:
     name: EDGE_TOKEN_AUDIENCE
     value: "core-platform"
+# Proxies that append to X-Forwarded-For before the edge listener: the ALB only.
+# `per_ip` rate limits (and geo-discovery, which falls back to this value) key
+# on the client address that many entries from the right. A WAF on the ALB adds
+# no hop; a CDN in front of the ALB (CloudFront…) does: bump this to 2, or every
+# client shares the CDN's address. Set here, once, for every edge server.
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: GRPC_TRUSTED_PROXY_HOPS
+    value: "1"

@@ -19,7 +19,7 @@ infrastructure/
 ├── modules/                    # reusable Terraform modules (the "how")
 │   ├── networking/{vpc,route53}   eks   acm-cert   artifacts/ecr
 │   ├── elasticache   msk   opensearch   s3-bucket (generic; Object-Lock param)
-│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   kubernetes/argocd
+│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   kubernetes/argocd
 └── live/                       # Terragrunt instantiations (the "where/which")
     ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr}  # account-shared
     ├── dev/us-east-1/…
@@ -44,12 +44,12 @@ infrastructure/
 
 ## 2. The apply DAG (staging region tree)
 
-Thirteen units resolve in this dependency order. `terragrunt run-all apply` walks
+Fourteen units resolve in this dependency order. `terragrunt run-all apply` walks
 the DAG automatically; the numbering shows the levels that can run concurrently.
 
 ```
 Level 0 (no deps):   networking/vpc     networking/acm-cert     data/media-bucket
-                     data/audit-kms      data/cnpg-backups
+                     data/audit-kms      data/cnpg-backups       security/waf-edge
         │
 Level 1:   eks ─────────────────────────► (vpc)
            data/msk  data/elasticache  data/opensearch ──► (vpc)
@@ -62,7 +62,7 @@ Level 3:   security/irsa-roles ─────────► (eks, audit-kms, a
         │
 Level 4:   kubernetes/argocd ───────────► (vpc, eks, security/irsa-roles,
                                             msk, elasticache, opensearch,
-                                            acm-cert, app-secrets)
+                                            acm-cert, app-secrets, waf-edge)
 ```
 
 > **The load-bearing edge:** `security/irsa-roles` depends on the **data-store
@@ -108,7 +108,8 @@ outputs** = what downstream units read.
 | Unit | Module | Depends on | Provisions / Key outputs |
 |---|---|---|---|
 | **`security/irsa-roles`** | `security/irsa-roles` | `eks`, `audit-kms`, `audit-worm`, `media-bucket`, `cnpg-backups` | The IRSA roles: ESO, Karpenter, LB controller, external-dns, cert-manager, EBS CSI, and the app roles (audit=sole KMS/WORM principal, media=bucket RW). → per-role ARNs. |
-| **`kubernetes/argocd`** | `kubernetes/argocd` | `vpc`, `eks`, `security/irsa-roles`, `msk`, `elasticache`, `opensearch`, `acm-cert`, `app-secrets` | Installs ArgoCD + `root-bootstrap` (targets `bootstrap/staging`). Writes **`cmp-envsubst-values`** (data-store endpoints for the CMP) and **`global-params-staging.json`**. Carries the **graceful-cleanup `before_hook` on `destroy`**. |
+| **`security/waf-edge`** | `waf-edge` | — | AWS WAF Web ACL (REGIONAL) for the client-edge ALB: per-IP rate rules (whole edge + `StartGuestSession`), AWS managed IP reputation / known bad inputs / common rule set (count by default), Bot Control behind a flag; CloudWatch logs (`authorization` redacted). → `web_acl_arn`, fed to the CMP as `WAF_EDGE_ACL_ARN` and associated by the LB controller from the Ingress annotation. |
+| **`kubernetes/argocd`** | `kubernetes/argocd` | `vpc`, `eks`, `security/irsa-roles`, `msk`, `elasticache`, `opensearch`, `acm-cert`, `app-secrets`, `waf-edge` | Installs ArgoCD + `root-bootstrap` (targets `bootstrap/staging`). Writes **`cmp-envsubst-values`** (data-store endpoints and the WAF ACL ARN for the CMP) and **`global-params-staging.json`**. Carries the **graceful-cleanup `before_hook` on `destroy`**. |
 
 > The `kubernetes/argocd` unit is the seam between Terraform and GitOps: it is the
 > *last* Terraform unit and the *first* thing that hands control to ArgoCD (see the
@@ -199,6 +200,7 @@ gotchas that outlive a `destroy`, is documented in the
 | `kms-key` | `data/audit-kms` |
 | `app-secrets` | `data/app-secrets` |
 | `security/irsa-roles` | `security/irsa-roles` |
+| `waf-edge` | `security/waf-edge` (staging, prod) |
 | `kubernetes/argocd` | `kubernetes/argocd` |
 | `artifacts/ecr` | `global/artifacts/ecr` (account-shared) |
 | `networking/route53` | `global/networking/route53` (account-shared) |

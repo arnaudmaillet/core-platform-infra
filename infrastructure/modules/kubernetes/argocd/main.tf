@@ -39,6 +39,7 @@ module "bootstrap" {
   auth_jwks_url           = var.auth_jwks_url
   keycloak_token_endpoint = var.keycloak_token_endpoint
   keycloak_admin_url      = var.keycloak_admin_url
+  waf_edge_acl_arn        = var.waf_edge_acl_arn
 }
 
 # 2. Installation des Addons EKS
