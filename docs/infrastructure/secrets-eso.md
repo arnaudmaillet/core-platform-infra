@@ -33,6 +33,7 @@ credentials for secret retrieval — that is the whole point of the topology.
 │    core-platform-staging-media-s3             {access_key, secret_key}    │
 │    core-platform-staging-audit-crypto         {object/witness keys, kek…} │
 │    core-platform-staging-auth-secrets         {signing pems, kc secret}   │
+│    core-platform-staging-auth-smtp            {username, password}        │
 └───────────────┬───────────────────────────────────────────────────────────┘
                 │  ESO IRSA role (external_secrets) assumed by the
                 │  external-secrets ServiceAccount (OIDC/JWT)
@@ -44,7 +45,8 @@ credentials for secret retrieval — that is the whole point of the topology.
 │      ├─ ExternalSecret search-creds     ──► Secret search-creds   (search) │
 │      ├─ ExternalSecret media-s3-creds   ──► Secret media-s3-creds (media)  │
 │      ├─ ExternalSecret audit-crypto     ──► Secret audit-crypto   (audit)  │
-│      └─ ExternalSecret auth-secrets     ──► Secret auth-secrets   (auth)   │
+│      ├─ ExternalSecret auth-secrets     ──► Secret auth-secrets   (auth)   │
+│      └─ ExternalSecret auth-smtp        ──► Secret auth-smtp      (auth)   │
 └───────────────┬───────────────────────────────────────────────────────────┘
                 │  envFrom (deployment patch)
                 ▼
@@ -86,7 +88,7 @@ grants read on `core-platform-staging-*` (and the `AmazonMSK_*` secret).
 | Class | How it gets into Secrets Manager | Examples |
 |---|---|---|
 | **Machine-generated** | Written by the **data-store Terraform modules** at apply time. | MSK SCRAM (`AmazonMSK_…_app`), Redis AUTH (`…-redis-auth`), OpenSearch master (`…-opensearch-master`). |
-| **Seeded** | Provisioned by the **`data/app-secrets`** Terragrunt unit (formerly created out-of-band by hand). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`. |
+| **Seeded** | Provisioned by the **`data/app-secrets`** Terragrunt unit (formerly created out-of-band by hand). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`, `…-auth-smtp`. |
 
 Both classes end up as SM entries under the `core-platform-staging-*` (or
 `AmazonMSK_core-platform-staging_*`) prefix, and ESO reads them uniformly. The split
@@ -96,7 +98,7 @@ job. See the [Terragrunt units reference](terragrunt-units.md#data-plane-managed
 
 ---
 
-## 4. The five ExternalSecrets (what each feeds)
+## 4. The six ExternalSecrets (what each feeds)
 
 | ExternalSecret → k8s Secret | Consumed by | Keys (env var ← SM property) |
 |---|---|---|
@@ -105,6 +107,7 @@ job. See the [Terragrunt units reference](terragrunt-units.md#data-plane-managed
 | **`media-s3-creds`** | `media` only | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
 | **`audit-crypto`** | `audit` only | object+witness access/secret keys, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
 | **`auth-secrets`** | `auth` only | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM`, `AUTH_KEYCLOAK_CLIENT_SECRET` (← `keycloak_client_secret`), `AUTH_KEYCLOAK_ADMIN_CLIENT_SECRET` (← `keycloak_admin_client_secret`) ← auth-secrets |
+| **`auth-smtp`** | `auth` only, mounted **`optional`** (a missing SMTP secret must not stop auth from booting) | `AUTH_SMTP_USERNAME/PASSWORD` ← auth-smtp (an IAM user's key id + derived SES SMTP password, allowed to send only as `no-reply@core-platform.click`) |
 
 > **Outside the fleet overlay:** the `keycloak` platform app (ns `keycloak`) carries
 > its own **`keycloak-secrets`** ExternalSecret: `KC_BOOTSTRAP_ADMIN_PASSWORD` ←

@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./README.md
-  source_sha256: 8bb384ffca79e51f751f5da6210c3e25d09eb133225d60f9b58e2e6cdfd53e44
+  source_sha256: eaf4fe5d63642dc40f6bf6eaeec2a13dad7b7d701b0d588a353e91fbcb3e5d2b
   translated_at: 2026-10-05
   status: complete
 ---
@@ -161,6 +161,7 @@ Terragrunt résout le DAG via `run-all apply` ; l'ordre explicite (chacun consom
   - `…-media-s3` `{access_key, secret_key}` — clés statiques d'un utilisateur IAM.
   - `…-audit-crypto` `{object/witness access+secret, kek_base64, signing_key_base64}`.
   - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret, keycloak_admin_client_secret}`.
+  - `…-auth-smtp` `{username, password}` — identifiants SMTP SES des codes à usage unique par email (désormais seedés par `data/app-secrets`).
 
 ### 3.3 Étapes manuelles et substituts (placeholders)
 

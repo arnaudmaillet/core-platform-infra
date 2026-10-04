@@ -73,8 +73,10 @@ provisioning checklist (endpoint placeholders, ScyllaCluster, secret seeding) is
 sequence:
 
 ```bash
+# 0. Account-global units, once per account (not torn down with the env):
+#    global/networking/route53 → global/messaging/ses-identity (+ artifacts/ecr).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
-#    security/irsa-roles → kubernetes/argocd). GITHUB_TOKEN is required —
+#    security/{irsa-roles,waf-edge} → kubernetes/argocd). GITHUB_TOKEN is required —
 #    the argocd unit registers the repo with ArgoCD.
 ( cd $BASE && GITHUB_TOKEN=$(gh auth token) \
     terragrunt run --all apply --non-interactive --backend-bootstrap -- -auto-approve )
@@ -99,6 +101,18 @@ kubectl apply -k k8s/base/infra/scylla-cluster
 - The `kubernetes/argocd` unit writes the **`cmp-envsubst-values`** Secret; without
   it the fleet renders literal `${VAR}` endpoints. Re-run that unit if placeholders
   don't resolve.
+- `security/waf-edge` applies **before** `kubernetes/argocd`, and both before the
+  fleet syncs: the client-edge Ingress carries `wafv2-acl-arn: ${WAF_EDGE_ACL_ARN}`.
+  A literal `${WAF_EDGE_ACL_ARN}` makes the LB controller fail to reconcile the
+  Ingress, so the **whole client-edge ALB** breaks, not just the WAF.
+- **SES / SNS sandboxes (one-time, per account, manual).** Until production access
+  is granted, SES only emails verified addresses and SNS only texts verified
+  numbers, which is enough for staging tests. Before real users sign up, request
+  SES production access:
+  `aws sesv2 put-account-details --production-access-enabled --mail-type TRANSACTIONAL --website-url <url> --use-case-description "<one-time sign-in codes>" --region us-east-1`,
+  then check `aws sesv2 get-account --region us-east-1` (`ProductionAccessEnabled`,
+  `SendQuota`). DKIM must show `SUCCESS` on
+  `aws sesv2 get-email-identity --email-identity core-platform.click`.
 
 > **Trust the Run Summary (`Succeeded / Failed`), NOT the exit code** — `terragrunt
 > run --all` can exit `0` with failed units.

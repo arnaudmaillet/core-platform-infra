@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: 72a1d154e8a50bb4f894855cb33e6b0ce5f87c6e3ea8d49918aee398a006b6b2
-  translated_at: 2026-09-15
+  source_sha256: 0703d38d7d3eab847ab8c15cd8cc3037626db27e3761e1639484a8106cb65f7d
+  translated_at: 2026-10-05
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`environment-lifecycle.md`](./environment-lifecycle.md) fait foi.
@@ -89,8 +89,10 @@ secrets) est dans [`k8s/PROVISIONING-staging.md`](../../k8s/PROVISIONING-staging
 La séquence au niveau boucle :
 
 ```bash
+# 0. Account-global units, once per account (not torn down with the env):
+#    global/networking/route53 → global/messaging/ses-identity (+ artifacts/ecr).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
-#    security/irsa-roles → kubernetes/argocd). GITHUB_TOKEN is required —
+#    security/{irsa-roles,waf-edge} → kubernetes/argocd). GITHUB_TOKEN is required —
 #    the argocd unit registers the repo with ArgoCD.
 ( cd $BASE && GITHUB_TOKEN=$(gh auth token) \
     terragrunt run --all apply --non-interactive --backend-bootstrap -- -auto-approve )
@@ -118,6 +120,19 @@ défaillance) :**
 - L'unité `kubernetes/argocd` écrit le Secret **`cmp-envsubst-values`** ; sans lui la
   flotte rend des endpoints `${VAR}` littéraux. Relancez cette unité si les
   placeholders ne se résolvent pas.
+- `security/waf-edge` s'applique **avant** `kubernetes/argocd`, et les deux avant la
+  synchro de la flotte : l'Ingress client-edge porte
+  `wafv2-acl-arn: ${WAF_EDGE_ACL_ARN}`. Un `${WAF_EDGE_ACL_ARN}` littéral empêche le
+  LB controller de réconcilier l'Ingress : c'est **tout l'ALB client-edge** qui
+  casse, pas seulement le WAF.
+- **Sandboxes SES / SNS (une fois, par compte, manuel).** Tant que l'accès production
+  n'est pas accordé, SES n'envoie qu'aux adresses vérifiées et SNS qu'aux numéros
+  vérifiés, ce qui suffit pour les tests staging. Avant l'arrivée de vrais
+  utilisateurs, demandez l'accès production SES :
+  `aws sesv2 put-account-details --production-access-enabled --mail-type TRANSACTIONAL --website-url <url> --use-case-description "<one-time sign-in codes>" --region us-east-1`,
+  puis vérifiez `aws sesv2 get-account --region us-east-1` (`ProductionAccessEnabled`,
+  `SendQuota`). DKIM doit afficher `SUCCESS` sur
+  `aws sesv2 get-email-identity --email-identity core-platform.click`.
 
 > **Fiez-vous au Run Summary (`Succeeded / Failed`), PAS au code de sortie** —
 > `terragrunt run --all` peut sortir en `0` avec des unités en échec.
