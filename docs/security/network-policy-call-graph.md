@@ -64,6 +64,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `search` | `PostServiceClient` | `post:50056` | hydrate post docs |
 | `search` | `ProfileServiceClient` | `profile:50052` | hydrate profile docs |
 | `search` | `SocialGraphServiceClient` | `social-graph:50053` | query-path audience filter (`CheckAccess`) — degrades to hashtags only when unreachable |
+| `geo-discovery` | `SocialGraphServiceClient` | `social-graph:50053` | per-reader map filter (`CheckAccess`) — **fail closed** |
 | `post` | `SocialGraphServiceClient` | `social-graph:50053` | audience check (`CheckAccess`) on non-author reads — **fail closed** |
 | `comment` | `PostServiceClient` + `SocialGraphServiceClient` | `post:50056`, `social-graph:50053` | read gate (`GetPost` + `CheckAccess`) on non-mesh reads — **fail closed** |
 | `media` | `ModerationServiceClient` | `moderation:50061` | **fail-closed Screen gate** |
@@ -74,7 +75,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | Callee | Allowed in-mesh callers | Port |
 |---|---|---|
 | `account` | `auth`, `moderation` | 50059 |
-| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search` | 50053 |
+| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery` | 50053 |
 | `post` | `search`, `comment` | 50056 |
 | `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim) | 50052 |
 | `moderation` | `media` | 50061 |
@@ -170,12 +171,12 @@ allows; they inform the **egress** policy (who needs MSK :9096).
 | `account.v1.events` | account | audit, profile |
 | `profile.v1.events` | profile | search, post, social-graph |
 | `post.v1.events` | post | timeline, search, realtime |
-| `post.published` / `post.deleted` | post | geo-discovery, notification / timeline |
+| `post.published` / `post.deleted` | post | geo-discovery, notification / timeline, geo-discovery |
 | `comment.created` / `comment.deleted` | comment | notification, engagement / engagement |
 | `engagement.reactions` | engagement | counter, notification, engagement |
 | `social-graph.*` (followed/unfollowed/tier) | social-graph | timeline, profile |
 | `counter.v1.popularity` | counter | realtime, geo-discovery |
-| `moderation.v1.events` | moderation | audit, search, media, post |
+| `moderation.v1.events` | moderation | audit, search, media, post, geo-discovery |
 | `auth.v1.events` | auth | audit |
 | `media.v1.events` | media | media |
 | `chat.*` | chat | chat (rest orphan) |
@@ -202,7 +203,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | comment | CNPG, Scylla | post:50056, social-graph:50053 | both |
 | engagement | CNPG, Redis, Scylla | — | both |
 | counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053 | both |
-| geo-discovery | CNPG, Redis, Scylla | — | consumer |
+| geo-discovery | CNPG, Redis, Scylla | social-graph:50053 | consumer |
 | notification | CNPG, Redis, Scylla | — | consumer |
 | timeline | CNPG, Redis, Scylla | social-graph:50053 | consumer |
 | chat | CNPG, Redis, Scylla | — | producer |
