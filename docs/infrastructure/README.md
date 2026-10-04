@@ -149,6 +149,7 @@ Terragrunt resolves the DAG with `run-all apply`; the explicit order (each consu
   - `…-media-s3` `{access_key, secret_key}` — IAM-user static keys.
   - `…-audit-crypto` `{object/witness access+secret, kek_base64, signing_key_base64}`.
   - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret, keycloak_admin_client_secret}`.
+  - `…-auth-smtp` `{username, password}` — SES SMTP credentials for one-time email codes (now seeded by `data/app-secrets`).
 
 ### 3.3 Manual steps & placeholders
 

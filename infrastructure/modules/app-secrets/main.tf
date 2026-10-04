@@ -10,6 +10,7 @@
 #   * <name>-audit-crypto {object/witness S3 keys, kek_base64, signing_key_base64}
 #   * <name>-auth-secrets {ES256 signing PEM pair, keycloak_client_secret,
 #                          keycloak_admin_client_secret}
+#   * <name>-auth-smtp    {username, password}                     (SES SMTP, one-time email codes)
 #
 # STAGING v1 PATH: static IAM keys (rusty-s3 cannot use IRSA web-identity) and the
 # env-KEK / signing key are GENERATED HERE and live in Terraform state. Prod's
@@ -258,5 +259,57 @@ resource "aws_secretsmanager_secret_version" "auth_secrets" {
     signing_public_pem           = tls_private_key.auth_signing.public_key_pem
     keycloak_client_secret       = random_password.keycloak_client_secret.result
     keycloak_admin_client_secret = random_password.keycloak_admin_client_secret.result
+  })
+}
+
+# ── auth: SES SMTP credentials (one-time email codes, guest-mode B4b) ─────────
+# auth sends its StartVerification codes through the SES SMTP interface
+# (email-smtp.<region>.amazonaws.com:587, STARTTLS). SMTP credentials are an IAM
+# user's access key: the username is the key id, the password is derived from the
+# secret (aws_iam_access_key.ses_smtp_password_v4, region-specific). The user may
+# only send through the account-global domain identity (global/messaging/
+# ses-identity), and only as ses_from_address.
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
+resource "aws_iam_user" "auth_smtp" {
+  name = "${var.name}-auth-smtp"
+  tags = var.tags
+}
+
+resource "aws_iam_user_policy" "auth_smtp" {
+  name = "ses-send-codes"
+  user = aws_iam_user.auth_smtp.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "SendAsNoReplyOnly"
+        Effect   = "Allow"
+        Action   = ["ses:SendRawEmail"]
+        Resource = ["arn:aws:ses:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:identity/${var.ses_sending_domain}"]
+        Condition = {
+          StringEquals = { "ses:FromAddress" = var.ses_from_address }
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_access_key" "auth_smtp" {
+  user = aws_iam_user.auth_smtp.name
+}
+
+resource "aws_secretsmanager_secret" "auth_smtp" {
+  name                    = "${var.name}-auth-smtp"
+  recovery_window_in_days = var.secret_recovery_window_days
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "auth_smtp" {
+  secret_id = aws_secretsmanager_secret.auth_smtp.id
+  secret_string = jsonencode({
+    username = aws_iam_access_key.auth_smtp.id
+    password = aws_iam_access_key.auth_smtp.ses_smtp_password_v4
   })
 }

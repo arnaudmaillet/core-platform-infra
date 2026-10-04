@@ -57,7 +57,9 @@ Review for surprises. Expected new/changed resources by area:
 ```bash
 terragrunt run-all apply
 # If you prefer manual control, apply per unit in this order:
-#   networking/vpc → eks → data/* → security/irsa-roles → kubernetes/argocd
+#   networking/vpc → eks → data/* → security/{irsa-roles,waf-edge} → kubernetes/argocd
+# (security/waf-edge MUST precede kubernetes/argocd: the client-edge Ingress needs
+#  WAF_EDGE_ACL_ARN in the CMP values, or the LB controller can't reconcile it)
 ```
 
 ### 1c. Validate Phase 1
