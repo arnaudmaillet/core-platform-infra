@@ -34,10 +34,12 @@ if [ -z "$id" ] || [ "$id" = "None" ]; then
   echo "sms-protect: created protect configuration $id"
 fi
 
-# Every country AWS can send SMS to, then one ALLOW/BLOCK entry each.
+# Every country AWS can send SMS to, then one ALLOW/BLOCK entry each. `--output
+# text` separates the keys with TABs (and may wrap lines): normalise to single
+# spaces, or the " $cc " membership checks below never match.
 countries="$(aws_sms get-protect-configuration-country-rule-set \
   --protect-configuration-id "$id" --number-capability SMS \
-  --query 'keys(CountryRuleSet)')"
+  --query 'keys(CountryRuleSet)' | tr -s '\t\n' '  ')"
 
 for cc in $*; do
   case " $countries " in
