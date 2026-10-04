@@ -22,15 +22,19 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-        # Stamp the client secret into the realm template. sed, not envsubst:
-        # busybox ships sed everywhere and the template has exactly one marker.
+        # Stamp the client secrets into the realm template. sed, not envsubst:
+        # busybox ships sed everywhere and the template has exactly two
+        # markers, one per confidential client (each appears once). The
+        # generated secrets are alphanumeric (random_password special=false),
+        # so they are safe as sed replacements.
         - name: render-realm
           image: busybox:1.36
           command:
             - sh
             - -c
             - >
-              sed "s|__KC_AUTH_CLIENT_SECRET__|${KC_AUTH_CLIENT_SECRET}|"
+              sed -e "s|__KC_AUTH_CLIENT_SECRET__|${KC_AUTH_CLIENT_SECRET}|"
+              -e "s|__KC_AUTH_ADMIN_CLIENT_SECRET__|${KC_AUTH_ADMIN_CLIENT_SECRET}|"
               /template/core-platform-realm.json
               > /import/core-platform-realm.json
           env:
@@ -39,6 +43,11 @@ spec:
                 secretKeyRef:
                   name: keycloak-secrets
                   key: KC_AUTH_CLIENT_SECRET
+            - name: KC_AUTH_ADMIN_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: KC_AUTH_ADMIN_CLIENT_SECRET
           volumeMounts:
             - name: realm-template
               mountPath: /template

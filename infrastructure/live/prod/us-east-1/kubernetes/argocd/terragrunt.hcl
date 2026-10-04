@@ -116,9 +116,11 @@ inputs = {
   opensearch_endpoint   = dependency.opensearch.outputs.endpoint
   # In-cluster, static per env — no Terraform dependency: auth-server serves the
   # well-known JWKS on :8081 (fleet Service, prod- namePrefix), Keycloak's token
-  # endpoint lives behind its ClusterIP Service in ns keycloak (platform appset).
+  # endpoint and realm Admin API (auth's password changes) live behind its
+  # ClusterIP Service in ns keycloak (platform appset).
   auth_jwks_url           = "http://prod-auth-server.default.svc.cluster.local:8081/.well-known/jwks.json"
   keycloak_token_endpoint = "http://keycloak.keycloak.svc.cluster.local:8080/realms/core-platform/protocol/openid-connect/token"
+  keycloak_admin_url      = "http://keycloak.keycloak.svc.cluster.local:8080/admin/realms/core-platform"
 
   addons_iam_roles = {
     karpenter        = dependency.security.outputs.karpenter_role_arn

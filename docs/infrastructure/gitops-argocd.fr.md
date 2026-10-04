@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./gitops-argocd.md
-  source_sha256: af4a4eafb6682fd815dd81251ee43a30b6767b45ba8f586c6449e4113a504710
+  source_sha256: f241d5102e6f45aa82cdb0183b9e65a1b6428d1692f4b7c2c6f5bfa0e4a4cb33
   translated_at: 2026-10-04
   status: complete
 ---
@@ -137,8 +137,9 @@ donc le plugin défini comme `envsubst` / `v1.0` est référencé **`envsubst-v1
 > mais que le Secret n'avait pas la clé. La valeur appartient à Terraform : relancez
 > l'unité `kubernetes/argocd` pour qu'elle réécrive `cmp-envsubst-values`, puis
 > forcez un hard-refresh de l'App (§6). Placeholders laissés vides à dessein jusqu'à
-> ce qu'une dépendance atterrisse : `AUTH_JWKS_URL`, `KEYCLOAK_TOKEN_ENDPOINT`
-> (DEFERRED jusqu'à Keycloak).
+> ce qu'une dépendance atterrisse : `AUTH_JWKS_URL`, `KEYCLOAK_TOKEN_ENDPOINT`,
+> `KEYCLOAK_ADMIN_URL` (DEFERRED jusqu'à Keycloak ; un `KEYCLOAK_ADMIN_URL` vide fait
+> répondre `UNAVAILABLE` aux `ChangePassword`/`VerifyCredentials` d'auth).
 
 ---
 

@@ -3,9 +3,22 @@
 # admin changes survive restarts; realm drift beyond the client contract is
 # acceptable for now).
 #
-# __KC_AUTH_CLIENT_SECRET__ is stamped by the init container from the ESO
-# secret (no reliance on Keycloak's import-placeholder behavior across
-# versions). sslRequired=none because the ONLY path to this Keycloak is
+# __KC_AUTH_CLIENT_SECRET__ and __KC_AUTH_ADMIN_CLIENT_SECRET__ are stamped by
+# the init container from the ESO secret (no reliance on Keycloak's
+# import-placeholder behavior across versions).
+#
+# Two confidential clients, both used ONLY by auth-server:
+#   * core-platform-auth        — the login broker (password grant).
+#   * core-platform-auth-admin  — a service account (client_credentials only)
+#     holding realm-management view-users + manage-users, through which auth
+#     sets and verifies passwords on the Admin API (auth.v1.ChangePassword /
+#     VerifyCredentials). Its roles are granted on the
+#     service-account-core-platform-auth-admin user below. Those RPCs are
+#     password oracles: bruteForceProtected MUST stay true.
+#
+# NB: --import-realm does not touch an EXISTING realm — a realm provisioned
+# before this client existed needs it added once by hand (Admin console or
+# kcadm.sh); a fresh environment gets it from this import. sslRequired=none because the ONLY path to this Keycloak is
 # in-cluster plain HTTP from auth-server — with the default "external" KC
 # would reject the password grant from a non-local pod IP.
 apiVersion: v1
@@ -39,6 +52,30 @@ data:
           "fullScopeAllowed": false,
           "redirectUris": ["https://*.core-platform.click/*"],
           "webOrigins": ["+"]
+        },
+        {
+          "clientId": "core-platform-auth-admin",
+          "name": "core-platform auth credential management (Admin API)",
+          "description": "Confidential service-account client for the auth service: client_credentials only, used to set and verify passwords through the Admin API. No interactive flow.",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "secret": "__KC_AUTH_ADMIN_CLIENT_SECRET__",
+          "standardFlowEnabled": false,
+          "implicitFlowEnabled": false,
+          "directAccessGrantsEnabled": false,
+          "serviceAccountsEnabled": true,
+          "fullScopeAllowed": true
+        }
+      ],
+      "users": [
+        {
+          "username": "service-account-core-platform-auth-admin",
+          "enabled": true,
+          "serviceAccountClientId": "core-platform-auth-admin",
+          "clientRoles": {
+            "realm-management": ["view-users", "manage-users"]
+          }
         }
       ]
     }

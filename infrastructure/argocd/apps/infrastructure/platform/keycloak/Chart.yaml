@@ -10,9 +10,12 @@
 #
 # Consumers/consumed:
 #   * auth-server (default ns) → keycloak.keycloak.svc:8080 token endpoint
+#     and realm Admin API (/admin/realms/core-platform — password changes)
 #     (the only ingress besides kubelet probes and CNPG plumbing).
-#   * client secret: the SAME <env>-auth-secrets/keycloak_client_secret both
-#     sides use — auth sends it, the imported realm expects it.
+#   * client secrets: the SAME <env>-auth-secrets/keycloak_client_secret
+#     (core-platform-auth) and keycloak_admin_client_secret
+#     (core-platform-auth-admin) both sides use — auth sends them, the
+#     imported realm expects them.
 #   * admin password: <env>-keycloak/admin_password (Terraform app-secrets).
 apiVersion: v2
 name: keycloak

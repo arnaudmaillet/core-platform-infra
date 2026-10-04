@@ -10,8 +10,9 @@ spec:
   podSelector: {}
   policyTypes: [Ingress]
 ---
-# auth-server (default ns) → Keycloak token endpoint. The ONLY application
-# ingress: every grant is brokered server-side by auth.
+# auth-server (default ns) → Keycloak token endpoint and realm Admin API
+# (/admin/realms/core-platform, password changes) — both on :8080. The ONLY
+# application ingress: every grant is brokered server-side by auth.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

@@ -8,7 +8,8 @@
 #   * <name>-media-s3     {access_key, secret_key}                 (rusty-s3 static keys)
 #   * <name>-scylla-s3    {access_key, secret_key}                 (scylla-manager-agent backups)
 #   * <name>-audit-crypto {object/witness S3 keys, kek_base64, signing_key_base64}
-#   * <name>-auth-secrets {ES256 signing PEM pair, keycloak_client_secret}
+#   * <name>-auth-secrets {ES256 signing PEM pair, keycloak_client_secret,
+#                          keycloak_admin_client_secret}
 #
 # STAGING v1 PATH: static IAM keys (rusty-s3 cannot use IRSA web-identity) and the
 # env-KEK / signing key are GENERATED HERE and live in Terraform state. Prod's
@@ -206,6 +207,16 @@ resource "random_password" "keycloak_client_secret" {
   special = false
 }
 
+# Second confidential client (core-platform-auth-admin): a service account auth
+# uses via client_credentials to set/verify passwords through the Keycloak Admin
+# API (auth.v1.ChangePassword / VerifyCredentials). A SEPARATE resource so adding
+# it never regenerates keycloak_client_secret — same one-value/two-consumers
+# contract: auth sends it, the imported realm expects it.
+resource "random_password" "keycloak_admin_client_secret" {
+  length  = 40
+  special = false
+}
+
 resource "aws_secretsmanager_secret" "auth_secrets" {
   name                    = "${var.name}-auth-secrets"
   recovery_window_in_days = var.secret_recovery_window_days
@@ -216,7 +227,8 @@ resource "aws_secretsmanager_secret" "auth_secrets" {
 # Consumed by the keycloak platform app's ExternalSecret (ns keycloak) as
 # KC_BOOTSTRAP_ADMIN_PASSWORD. The client secret Keycloak's imported realm
 # expects is the SAME keycloak_client_secret published in <name>-auth-secrets
-# below — one generated value, two consumers, zero drift.
+# below — one generated value, two consumers, zero drift (likewise
+# keycloak_admin_client_secret for the core-platform-auth-admin client).
 resource "random_password" "keycloak_admin_password" {
   length  = 32
   special = false
@@ -242,8 +254,9 @@ resource "aws_secretsmanager_secret_version" "auth_secrets" {
     # ring EC path only accepts PKCS#8 — with SEC1 the key never loads and the
     # service fail-closes with "no signing key is currently available" (found
     # live on the staging bring-up).
-    signing_private_pem    = tls_private_key.auth_signing.private_key_pem_pkcs8
-    signing_public_pem     = tls_private_key.auth_signing.public_key_pem
-    keycloak_client_secret = random_password.keycloak_client_secret.result
+    signing_private_pem          = tls_private_key.auth_signing.private_key_pem_pkcs8
+    signing_public_pem           = tls_private_key.auth_signing.public_key_pem
+    keycloak_client_secret       = random_password.keycloak_client_secret.result
+    keycloak_admin_client_secret = random_password.keycloak_admin_client_secret.result
   })
 }

@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./README.md
-  source_sha256: b5e01542771be73e29bb6cc6fe501e2825ae74a227f4dead94d5c4d62809abc0
-  translated_at: 2026-09-16
+  source_sha256: 1017bdca8d14c6380031060b5a7f0cc3a1b198efa1ffe76363c5889c3e84f615
+  translated_at: 2026-10-04
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`README.md`](./README.md) fait foi.
@@ -160,11 +160,11 @@ Terragrunt résout le DAG via `run-all apply` ; l'ordre explicite (chacun consom
 - **À provisionner hors-bande (à créer manuellement dans Secrets Manager sous `core-platform-staging-*`) :**
   - `…-media-s3` `{access_key, secret_key}` — clés statiques d'un utilisateur IAM.
   - `…-audit-crypto` `{object/witness access+secret, kek_base64, signing_key_base64}`.
-  - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret}`.
+  - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret, keycloak_admin_client_secret}`.
 
 ### 3.3 Étapes manuelles et substituts (placeholders)
 
-Les substituts d'endpoint (`<<…>>`) sont remplacés à partir des sorties Terragrunt au moment du déploiement (dans les fichiers `.env` et les patches de scaler KEDA) : `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (TLS du NLB), `<<KEYCLOAK_TOKEN_ENDPOINT>>`, `<<AUTH_JWKS_URL>>`. De plus : provisionner les secrets du §3.2 ; vérifier que chaque topic mis à l'échelle sur retard dispose de **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6) ; construire/pousser les images via la CI `fleet-images-deploy` vers `:staging`.
+Les substituts d'endpoint (`<<…>>`) sont remplacés à partir des sorties Terragrunt au moment du déploiement (dans les fichiers `.env` et les patches de scaler KEDA) : `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (TLS du NLB), `<<KEYCLOAK_TOKEN_ENDPOINT>>`, `<<KEYCLOAK_ADMIN_URL>>`, `<<AUTH_JWKS_URL>>`. De plus : provisionner les secrets du §3.2 ; vérifier que chaque topic mis à l'échelle sur retard dispose de **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6) ; construire/pousser les images via la CI `fleet-images-deploy` vers `:staging`.
 
 ### 3.4 Mises en garde Jour-1 et reports connus
 

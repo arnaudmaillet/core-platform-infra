@@ -43,6 +43,11 @@ variable "keycloak_token_endpoint" {
   default     = ""
   description = "Keycloak token endpoint (CMP var KEYCLOAK_TOKEN_ENDPOINT; empty until provisioned)."
 }
+variable "keycloak_admin_url" {
+  type        = string
+  default     = ""
+  description = "Keycloak realm Admin API base, .../admin/realms/<realm> (CMP var KEYCLOAK_ADMIN_URL; empty = auth credential-management RPCs answer UNAVAILABLE)."
+}
 
 # Per-env bootstrap wiring (defaults preserve the original single-env/dev behavior).
 variable "bootstrap_path" {
