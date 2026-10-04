@@ -61,7 +61,8 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `moderation` | `AccountServiceClient` | `account:50059` | subject resolution |
 | `moderation` | `PostServiceClient` + `CommentServiceClient` + `ProfileServiceClient` | `post:50056`, `comment:50057`, `profile:50052` | client report target → owning account (`SubmitReport`) |
 | `counter` | `SocialGraphServiceClient` | `social-graph:50053` | follower/following reconcile |
-| `timeline` | `SocialGraphServiceClient` / `SocialGraphGrpcClient` | `social-graph:50053` | fan-out + cold rebuild |
+| `timeline` | `SocialGraphServiceClient` / `SocialGraphGrpcClient` | `social-graph:50053` | fan-out + cold rebuild; discovery-feed audience check (`CheckAccess`) — **fail closed** |
+| `timeline` | `GeoDiscoveryServiceClient` | `geo-discovery:50054` | discovery feed NEARBY candidates (`QueryTile`) |
 | `search` | `PostServiceClient` | `post:50056` | hydrate post docs |
 | `search` | `ProfileServiceClient` | `profile:50052` | hydrate profile docs |
 | `search` | `SocialGraphServiceClient` | `social-graph:50053` | query-path audience filter (`CheckAccess`) — degrades to hashtags only when unreachable |
@@ -83,11 +84,12 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `auth` | `realtime` | 50060 |
 | `auth` (JWKS, HTTP) | **every server pod** — all edge-token verifiers | 8081 |
 
-`comment` takes one in-mesh caller, `moderation` (report target lookup), on 50057:
-it is still in the same-namespace allow, not tightened.
+`comment` takes one in-mesh caller, `moderation` (report target lookup), on 50057,
+and `geo-discovery` one, `timeline` (NEARBY), on 50054: both are still in the
+same-namespace allow, not tightened.
 
 **No in-mesh inbound at all** (→ ingress = health probe only, + the **client
-edge** on :9443, §3): `chat`, `geo-discovery`, `notification`,
+edge** on :9443, §3): `chat`, `notification`,
 `engagement`, `timeline`, `search`, `media`, `counter-server`, and the workers
 `counter-worker`, `realtime-dispatcher`, `audit-worker`. `audit-server` takes only
 the break-glass `RecordPrivileged`/`Query` path (no normal-flow mesh caller).
@@ -209,7 +211,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053 | both |
 | geo-discovery | CNPG, Redis, Scylla | social-graph:50053 | consumer |
 | notification | CNPG, Redis, Scylla | — | consumer |
-| timeline | CNPG, Redis, Scylla | social-graph:50053 | consumer |
+| timeline | CNPG, Redis, Scylla | social-graph:50053, geo-discovery:50054 | consumer |
 | chat | CNPG, Redis, Scylla | — | producer |
 | moderation | CNPG, Redis, Scylla | account:50059, post:50056, comment:50057, profile:50052 | both |
 | media (server) | CNPG, Redis, **S3** (asset + object-store) | moderation:50061 | both |
