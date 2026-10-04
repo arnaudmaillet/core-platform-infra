@@ -34,6 +34,7 @@ credentials for secret retrieval — that is the whole point of the topology.
 │    core-platform-staging-audit-crypto         {object/witness keys, kek…} │
 │    core-platform-staging-auth-secrets         {signing pems, kc secret}   │
 │    core-platform-staging-auth-smtp            {username, password}        │
+│    core-platform-staging-auth-sns             {access key id, secret}     │
 └───────────────┬───────────────────────────────────────────────────────────┘
                 │  ESO IRSA role (external_secrets) assumed by the
                 │  external-secrets ServiceAccount (OIDC/JWT)
@@ -46,7 +47,8 @@ credentials for secret retrieval — that is the whole point of the topology.
 │      ├─ ExternalSecret media-s3-creds   ──► Secret media-s3-creds (media)  │
 │      ├─ ExternalSecret audit-crypto     ──► Secret audit-crypto   (audit)  │
 │      ├─ ExternalSecret auth-secrets     ──► Secret auth-secrets   (auth)   │
-│      └─ ExternalSecret auth-smtp        ──► Secret auth-smtp      (auth)   │
+│      ├─ ExternalSecret auth-smtp        ──► Secret auth-smtp      (auth)   │
+│      └─ ExternalSecret auth-sns         ──► Secret auth-sns       (auth)   │
 └───────────────┬───────────────────────────────────────────────────────────┘
                 │  envFrom (deployment patch)
                 ▼
@@ -88,7 +90,7 @@ grants read on `core-platform-staging-*` (and the `AmazonMSK_*` secret).
 | Class | How it gets into Secrets Manager | Examples |
 |---|---|---|
 | **Machine-generated** | Written by the **data-store Terraform modules** at apply time. | MSK SCRAM (`AmazonMSK_…_app`), Redis AUTH (`…-redis-auth`), OpenSearch master (`…-opensearch-master`). |
-| **Seeded** | Provisioned by the **`data/app-secrets`** Terragrunt unit (formerly created out-of-band by hand). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`, `…-auth-smtp`. |
+| **Seeded** | Provisioned by the **`data/app-secrets`** Terragrunt unit (formerly created out-of-band by hand). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`, `…-auth-smtp`, `…-auth-sns`. |
 
 Both classes end up as SM entries under the `core-platform-staging-*` (or
 `AmazonMSK_core-platform-staging_*`) prefix, and ESO reads them uniformly. The split
@@ -98,7 +100,7 @@ job. See the [Terragrunt units reference](terragrunt-units.md#data-plane-managed
 
 ---
 
-## 4. The six ExternalSecrets (what each feeds)
+## 4. The seven ExternalSecrets (what each feeds)
 
 | ExternalSecret → k8s Secret | Consumed by | Keys (env var ← SM property) |
 |---|---|---|
@@ -108,6 +110,7 @@ job. See the [Terragrunt units reference](terragrunt-units.md#data-plane-managed
 | **`audit-crypto`** | `audit` only | object+witness access/secret keys, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
 | **`auth-secrets`** | `auth` only | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM`, `AUTH_KEYCLOAK_CLIENT_SECRET` (← `keycloak_client_secret`), `AUTH_KEYCLOAK_ADMIN_CLIENT_SECRET` (← `keycloak_admin_client_secret`) ← auth-secrets |
 | **`auth-smtp`** | `auth` only, mounted **`optional`** (a missing SMTP secret must not stop auth from booting) | `AUTH_SMTP_USERNAME/PASSWORD` ← auth-smtp (an IAM user's key id + derived SES SMTP password, allowed to send only as `no-reply@core-platform.click`) |
+| **`auth-sns`** | `auth` only, mounted **`optional`** | `AUTH_SNS_ACCESS_KEY_ID/SECRET_ACCESS_KEY` ← auth-sns (an IAM user that may `sns:Publish` to phone numbers only; account-wide SMS brakes in `global/messaging/sms`) |
 
 > **Outside the fleet overlay:** the `keycloak` platform app (ns `keycloak`) carries
 > its own **`keycloak-secrets`** ExternalSecret: `KC_BOOTSTRAP_ADMIN_PASSWORD` ←
@@ -148,6 +151,19 @@ keys** seeded via `data/app-secrets`.
 For `audit`, real AWS KMS/HSM custody and a true cross-account WORM witness are the
 documented external deferral; the wiring here is the **v1 ENV-KEK path**
 (`AUDIT_KEK_BASE64`) with the witness pointed at the same WORM bucket.
+
+`auth` follows the same static-key pattern for its one-time codes: `auth-smtp` (SES
+SMTP) and `auth-sns` (SNS SMS) are IAM-user access keys too.
+
+**Rotating a static key** (media, scylla, audit, auth-smtp, auth-sns; the keys
+also sit in Terraform state):
+1. `terragrunt apply -replace=aws_iam_access_key.<name>` in `data/app-secrets`
+   (e.g. `auth_smtp`): new key, new SM value, old key deleted.
+2. ESO picks the new value up within its 1h refresh, or right away with
+   `kubectl annotate externalsecret <prefix>-<name> force-sync=$(date +%s) --overwrite`.
+3. Restart the consumer (`kubectl rollout restart deploy/<prefix>-auth-server`):
+   `envFrom` is only read at pod start. The same holds when an `optional` secret
+   syncs **after** the pods started.
 
 ---
 

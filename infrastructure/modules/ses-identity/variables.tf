@@ -14,7 +14,7 @@ variable "mail_from_subdomain" {
 
 variable "dmarc_policy" {
   type        = string
-  description = "DMARC policy published at _dmarc.<domain_name>. Only SES sends as this domain, DKIM-aligned, so quarantine is safe from day one."
+  description = "DMARC policy published at _dmarc.<domain_name>. Only SES sends as this domain, DKIM-aligned, so quarantine is safe from day one. Anything that later sends as @<domain_name> (Keycloak emails, a workspace mailbox, a marketing tool) must be DKIM- or SPF-aligned first, or its mail is quarantined."
   default     = "quarantine"
   validation {
     condition     = contains(["none", "quarantine", "reject"], var.dmarc_policy)

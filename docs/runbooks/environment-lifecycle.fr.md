@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: 0703d38d7d3eab847ab8c15cd8cc3037626db27e3761e1639484a8106cb65f7d
+  source_sha256: 80bccc7b9c406f5ec95b8f15fb0d0beb4e4c0d5f9ee32a1fb5700a710e9539c8
   translated_at: 2026-10-05
   status: complete
 ---
@@ -90,7 +90,7 @@ La séquence au niveau boucle :
 
 ```bash
 # 0. Account-global units, once per account (not torn down with the env):
-#    global/networking/route53 → global/messaging/ses-identity (+ artifacts/ecr).
+#    global/networking/route53 → global/messaging/{ses-identity,sms} (+ artifacts/ecr).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
 #    security/{irsa-roles,waf-edge} → kubernetes/argocd). GITHUB_TOKEN is required —
 #    the argocd unit registers the repo with ArgoCD.
@@ -133,6 +133,14 @@ défaillance) :**
   puis vérifiez `aws sesv2 get-account --region us-east-1` (`ProductionAccessEnabled`,
   `SendQuota`). DKIM doit afficher `SUCCESS` sur
   `aws sesv2 get-email-identity --email-identity core-platform.click`.
+  Pour les SMS, ouvrez un cas de support pour sortir de la **sandbox SMS de SNS**
+  *et* relever le **quota de dépenses SMS** (1 USD par défaut) jusqu'au plafond
+  mensuel visé, puis relevez `monthly_spend_limit_usd` dans `global/messaging/sms`
+  en conséquence. Jamais avant que les contrôles anti-fraude SMS d'auth soient en
+  place (core-platform-infra#14).
+- **Email d'alerte ops (alarmes de dépenses SMS), gardé hors de ce repo public :**
+  `aws ssm put-parameter --name /core-platform/ops/alert-email --type String --value <email> --region us-east-1`,
+  ré-appliquez `global/messaging/sms`, puis confirmez l'abonnement depuis la boîte mail.
 
 > **Fiez-vous au Run Summary (`Succeeded / Failed`), PAS au code de sortie** —
 > `terragrunt run --all` peut sortir en `0` avec des unités en échec.

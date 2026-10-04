@@ -12,7 +12,8 @@
 #   * Easy DKIM (RSA 2048): three CNAMEs <token>._domainkey.<domain>.
 #   * Custom MAIL FROM <mail_from_subdomain>.<domain>: SES feedback MX + SPF, so
 #     bounces come back to SES and SPF aligns with the From domain.
-#   * DMARC at _dmarc.<domain>.
+#   * DMARC at _dmarc.<domain>, p=quarantine: any OTHER sender of @<domain>
+#     (Keycloak emails, a workspace mailbox…) must be DKIM/SPF-aligned first.
 #   * Account-level suppression list (bounces + complaints): SES stops sending to
 #     an address that hard-bounced or complained, protecting the reputation.
 #

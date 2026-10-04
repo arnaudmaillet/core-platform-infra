@@ -74,7 +74,7 @@ sequence:
 
 ```bash
 # 0. Account-global units, once per account (not torn down with the env):
-#    global/networking/route53 → global/messaging/ses-identity (+ artifacts/ecr).
+#    global/networking/route53 → global/messaging/{ses-identity,sms} (+ artifacts/ecr).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
 #    security/{irsa-roles,waf-edge} → kubernetes/argocd). GITHUB_TOKEN is required —
 #    the argocd unit registers the repo with ArgoCD.
@@ -113,6 +113,13 @@ kubectl apply -k k8s/base/infra/scylla-cluster
   then check `aws sesv2 get-account --region us-east-1` (`ProductionAccessEnabled`,
   `SendQuota`). DKIM must show `SUCCESS` on
   `aws sesv2 get-email-identity --email-identity core-platform.click`.
+  For SMS, open a support case to leave the **SNS SMS sandbox** *and* raise the **SMS
+  spending quota** (1 USD by default) to the target monthly limit, then raise
+  `monthly_spend_limit_usd` in `global/messaging/sms` to match. Never before auth's
+  SMS toll-fraud controls are live (core-platform-infra#14).
+- **Ops alert email (SMS spend alarms), kept out of this public repo:**
+  `aws ssm put-parameter --name /core-platform/ops/alert-email --type String --value <email> --region us-east-1`,
+  re-apply `global/messaging/sms`, then confirm the subscription from the inbox.
 
 > **Trust the Run Summary (`Succeeded / Failed`), NOT the exit code** — `terragrunt
 > run --all` can exit `0` with failed units.

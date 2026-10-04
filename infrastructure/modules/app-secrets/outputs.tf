@@ -20,6 +20,11 @@ output "auth_smtp_secret_arn" {
   value       = aws_secretsmanager_secret.auth_smtp.arn
 }
 
+output "auth_sns_secret_arn" {
+  description = "ARN of the auth SNS (SMS) static-key secret."
+  value       = aws_secretsmanager_secret.auth_sns.arn
+}
+
 output "auth_secrets_secret_arn" {
   description = "ARN of the auth signing/Keycloak secret."
   value       = aws_secretsmanager_secret.auth_secrets.arn
