@@ -1,4 +1,4 @@
-# Fleet-wide externalized infrastructure config (dev). Mounted into every service
+# Fleet-wide externalized infrastructure config (prod). Mounted into every service
 # as /etc/infra/infrastructure.toml and hot-reloaded by the runtime — edit the
 # ConfigMap and the change applies with no restart.
 
@@ -17,13 +17,107 @@ retry = { max_attempts = 3, backoff = { kind = "exponential", base_ms = 50, max_
 # timeline -> social-graph (fan-out + cold-rebuild reads)
 "social-graph" = "standard"
 
+# ── Ingress rate limits ───────────────────────────────────────────────────────
+# Two listeners, resolved separately (guest-mode B5a, core-platform-backend#706):
+#   * MESH (in-cluster callers, no principal): `bindings` / `default_profile`.
+#     Keep it per_method — a per_caller profile here would put every in-cluster
+#     caller of a method into one bucket.
+#   * CLIENT EDGE (:9443 behind the ALB): `edge_bindings`, then
+#     `edge_default_profile`. Members and guests are keyed on the token `sub`
+#     (per_caller); anonymous methods on the client address the ALB appended to
+#     X-Forwarded-For (per_ip, GRPC_TRUSTED_PROXY_HOPS = 1 — a WAF on the ALB
+#     adds no hop, a CDN in front of it would make it 2).
+# Values are PER REPLICA (mode = local). Mobile CGNAT shares IPv4 addresses,
+# hence the generous per-IP limits.
 [traffic]
-default_profile = "standard"
+default_profile      = "standard"   # mesh
+edge_default_profile = "client"     # client edge
 
 [traffic.profiles.standard]
 rps   = 1000
 burst = 200
 scope = "per_method"
+
+# Every client (member, or guest session: the token sub) gets its own bucket.
+[traffic.profiles.client]
+rps   = 50
+burst = 100
+scope = "per_caller"
+
+[traffic.profiles.public-read]
+rps   = 20
+burst = 40
+scope = "per_caller"
+
+# RecordView / RecordShare: no actor, fire-and-forget.
+[traffic.profiles.counters]
+rps   = 5
+burst = 20
+scope = "per_caller"
+
+# ── Anonymous (edge `public`) methods, keyed per IP ──
+[traffic.profiles.guest-start]
+rps      = 30
+per_secs = 3600                     # 30 an hour per IP
+burst    = 10
+scope    = "per_ip"
+
+# Login / Refresh. Refresh runs on every device on token expiry, and a large
+# mobile CGNAT pool can exceed 10/min/IP: SHADOW first in prod (enforce = false,
+# decisions only counted). Enforce once
+# infra_traffic_throttled_total{profile="login",status="shadow"} stays quiet.
+[traffic.profiles.login]
+rps      = 10
+per_secs = 60                       # 10 a minute per IP
+burst    = 10
+scope    = "per_ip"
+enforce  = false
+
+# SignUp (Sign in with Apple / Google id_token, or a one-time code) — B4a.
+[traffic.profiles.sign-up]
+rps      = 20
+per_secs = 3600                     # 20 an hour per IP
+burst    = 5
+scope    = "per_ip"
+
+# StartVerification (one-time code by email or SMS) — B4b/B4c. Kept low: each
+# SMS costs money (toll fraud / SMS pumping); auth also budgets per address.
+[traffic.profiles.verification]
+rps      = 10
+per_secs = 3600                     # 10 an hour per IP
+burst    = 3
+scope    = "per_ip"
+
+[traffic.edge_bindings]
+"/auth.v1.AuthService/StartGuestSession"   = "guest-start"
+"/auth.v1.AuthService/Login"               = "login"
+"/auth.v1.AuthService/Refresh"             = "login"
+"/auth.v1.AuthService/SignUp"              = "sign-up"
+"/auth.v1.AuthService/StartVerification"   = "verification"
+"/engagement.v1.EngagementService/RecordView"  = "counters"
+"/engagement.v1.EngagementService/RecordShare" = "counters"
+# Public reads (edge rule `public_read` in the backend's service.rs files).
+"/comment.v1.CommentService/GetComment"                  = "public-read"
+"/comment.v1.CommentService/ListReplies"                 = "public-read"
+"/comment.v1.CommentService/ListTopLevel"                = "public-read"
+"/counter.v1.CounterService/BatchGetCounters"            = "public-read"
+"/engagement.v1.EngagementService/GetPostEngagement"     = "public-read"
+"/geo_discovery.v1.GeoDiscoveryService/GetGeoTimeline"   = "public-read"
+"/geo_discovery.v1.GeoDiscoveryService/QueryTile"        = "public-read"
+"/geo_discovery.v1.GeoDiscoveryService/GetCountryAccess" = "public-read"
+"/media.v1.MediaService/ResolveDelivery"                 = "public-read"
+"/media.v1.MediaService/BatchResolveDelivery"            = "public-read"
+"/post.v1.PostService/GetPost"                           = "public-read"
+"/post.v1.PostService/ListPostsByProfile"                = "public-read"
+"/profile.v1.ProfileService/GetProfileById"              = "public-read"
+"/profile.v1.ProfileService/GetProfileByHandle"          = "public-read"
+"/profile.v1.ProfileService/CheckHandleAvailability"     = "public-read"
+"/search.v1.SearchService/Search"                        = "public-read"
+"/search.v1.SearchService/Suggest"                       = "public-read"
+"/search.v1.SearchService/MultiSearch"                   = "public-read"
+"/social_graph.v1.SocialGraphService/ListFollowers"      = "public-read"
+"/social_graph.v1.SocialGraphService/ListFollowing"      = "public-read"
+"/timeline.v1.TimelineService/GetDiscoveryFeed"          = "public-read"
 
 # ── Cache profiles (consumed by profile's read-through caches) ────────────────
 [cache]
