@@ -109,74 +109,74 @@ configMapGenerator:
 images:
   - name: core-platform-chat-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-chat-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-social-graph-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-social-graph-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-profile-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-profile-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-geo-discovery-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-geo-discovery-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-notification-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-notification-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-post-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-post-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-comment-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-comment-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-engagement-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-engagement-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-account-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-account-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-timeline-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-timeline-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-migrator
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-migrator
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-topic-provisioner
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-topic-provisioner
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   # ── New fleet (one image per binary) ─────────────────────────────────────────
   - name: core-platform-counter-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-counter-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-counter-worker
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-counter-worker
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-audit-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-audit-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-audit-worker
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-audit-worker
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-auth-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-auth-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-media-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-media-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-media-worker
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-media-worker
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-moderation-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-moderation-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-search-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-search-server
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-realtime-gateway
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-realtime-gateway
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
   - name: core-platform-realtime-dispatcher
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-realtime-dispatcher
-    newTag: bb9adcac36b69c06def2c7c09603dd5b6a2fc116
+    newTag: f3e41782868dc9bcb66e4d63c3cb4dcdeca4f68e
 patches:
   # Baseline pod-security hardening (non-root, seccomp, drop caps) on every Deployment.
   - path: patch-securitycontext.yaml
