@@ -45,6 +45,10 @@ variable "keycloak_token_endpoint" {
   type    = string
   default = ""
 }
+variable "keycloak_admin_url" {
+  type    = string
+  default = ""
+}
 
 # Per-env bootstrap wiring (defaults preserve the original dev behavior).
 variable "bootstrap_path" {

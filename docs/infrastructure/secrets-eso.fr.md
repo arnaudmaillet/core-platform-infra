@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./secrets-eso.md
-  source_sha256: 7362e908bc9bd0eb75f1101022ed8029fc28f4802940d5fb5d93cb7f0eed1fb1
-  translated_at: 2026-07-01
+  source_sha256: 51e56066bb58a751fbdce0f2ade3b14ebd18a2d99098ab45eec8239ff3a0da5e
+  translated_at: 2026-10-04
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`secrets-eso.md`](./secrets-eso.md) fait foi.
@@ -119,7 +119,16 @@ seedées sont le travail de l'unité `data/app-secrets`. Voir la
 | **`search-creds`** | `search` seulement | `SEARCH_OPENSEARCH_USER/PASSWORD` ← opensearch-master |
 | **`media-s3-creds`** | `media` seulement | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
 | **`audit-crypto`** | `audit` seulement | clés object+witness access/secret, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
-| **`auth-secrets`** | `auth` seulement | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM`, `AUTH_KEYCLOAK_CLIENT_SECRET` ← auth-secrets |
+| **`auth-secrets`** | `auth` seulement | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM`, `AUTH_KEYCLOAK_CLIENT_SECRET` (← `keycloak_client_secret`), `AUTH_KEYCLOAK_ADMIN_CLIENT_SECRET` (← `keycloak_admin_client_secret`) ← auth-secrets |
+
+> **Hors de l'overlay de la flotte :** l'app plateforme `keycloak` (ns `keycloak`)
+> porte son propre ExternalSecret **`keycloak-secrets`** : `KC_BOOTSTRAP_ADMIN_PASSWORD`
+> ← keycloak (`admin_password`), et `KC_AUTH_CLIENT_SECRET` / `KC_AUTH_ADMIN_CLIENT_SECRET`
+> ← les **mêmes** propriétés d'auth-secrets (`keycloak_client_secret` /
+> `keycloak_admin_client_secret`). Son init container `render-realm` les estampille
+> dans les clients `core-platform-auth` (broker de login) et `core-platform-auth-admin`
+> (service account de l'Admin API : changements de mot de passe) du realm importé ;
+> auth et Keycloak partagent donc toujours une seule valeur générée par client.
 
 Deux conventions qui font trébucher :
 
@@ -228,6 +237,7 @@ kubectl -n external-secrets logs deploy/external-secrets | tail -50
 | `SecretSyncedError`, `ResourceNotFoundException` | L'entrée SM n'existe pas (secret seedé jamais provisionné) | Appliquez `data/app-secrets` ; vérifiez que les noms de propriété correspondent. |
 | `SecretSyncedError`, `PendingDeletion` après une reconstruction | Nom SM réservé par un démontage précédent | Lancez `preflight-clean-env.sh staging --fix`, attendez, réappliquez — voir le [runbook de cycle de vie](../runbooks/environment-lifecycle.md). |
 | L'env du pod a la variable mais valeur erronée/vide | Nom de `property` incorrect, ou valeur SM seedée à vide (p. ex. placeholder Keycloak) | Corrigez le `remoteRef.property` ; notez que `AUTH_KEYCLOAK_CLIENT_SECRET` est un **placeholder** jusqu'à Keycloak (DEFERRED). |
+| auth reçoit `unauthorized_client` / `invalid_client` de Keycloak (login, ou `ChangePassword`/`VerifyCredentials` → client admin) | Le realm a été importé **avant** que ce client (ou ce secret) n'existe — `--import-realm` n'écrase jamais un realm existant | Ajoutez le client une fois à la main (console Admin / `kcadm.sh`) avec le secret de `…-auth-secrets` ; pour `core-platform-auth-admin`, accordez aussi à son utilisateur service-account `realm-management` `view-users` + `manage-users`. |
 | Store `ValidationFailed`, `serviceAccountRef` rejeté | Quelqu'un l'a changé en `SecretStore` namespacé | Ce doit être un `ClusterSecretStore` (§2). |
 
 ---

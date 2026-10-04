@@ -21,6 +21,7 @@ locals {
     "ACM_CERTIFICATE_ARN",
     "AUTH_JWKS_URL",
     "KEYCLOAK_TOKEN_ENDPOINT",
+    "KEYCLOAK_ADMIN_URL",
   ]
 
   cmp_generate_script = <<-SH

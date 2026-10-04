@@ -148,11 +148,11 @@ Terragrunt resolves the DAG with `run-all apply`; the explicit order (each consu
 - **Seeded out-of-band (must be created manually in Secrets Manager under `core-platform-staging-*`):**
   - `…-media-s3` `{access_key, secret_key}` — IAM-user static keys.
   - `…-audit-crypto` `{object/witness access+secret, kek_base64, signing_key_base64}`.
-  - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret}`.
+  - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret, keycloak_admin_client_secret}`.
 
 ### 3.3 Manual steps & placeholders
 
-Endpoint placeholders (`<<…>>`) are substituted from Terragrunt outputs at deploy time (in `.env` files and the KEDA scaler patches): `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (NLB TLS), `<<KEYCLOAK_TOKEN_ENDPOINT>>`, `<<AUTH_JWKS_URL>>`. Additionally: seed the §3.2 secrets; verify each lag-scaled topic has **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6); build/push images via the `fleet-images-deploy` CI to `:staging`.
+Endpoint placeholders (`<<…>>`) are substituted from Terragrunt outputs at deploy time (in `.env` files and the KEDA scaler patches): `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (NLB TLS), `<<KEYCLOAK_TOKEN_ENDPOINT>>`, `<<KEYCLOAK_ADMIN_URL>>`, `<<AUTH_JWKS_URL>>`. Additionally: seed the §3.2 secrets; verify each lag-scaled topic has **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6); build/push images via the `fleet-images-deploy` CI to `:staging`.
 
 ### 3.4 Day-1 caveats & known deferrals
 
