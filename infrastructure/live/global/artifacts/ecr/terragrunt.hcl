@@ -28,7 +28,7 @@ inputs = {
     # pull (1,028 GB / 83.55 USD in July 2026, the account's largest line). It was
     # also the one repo the shared `imageCountMoreThan: 30` lifecycle rule broke:
     # 44 cache tags in a single repo meant 14 were always expiring in rotation.
-    # See .github/workflows/fleet-images-deploy.yml.
+    # See .github/workflows/fleet-images-deploy.yml in arnaudmaillet/core-platform-backend.
     # ── Existing fleet (servers) ─────────────────────────────────────────────
     "chat-server",
     "social-graph-server",

@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./gitops-argocd.md
-  source_sha256: f3f5a1f40b0a216d46fa92bd6198a78793c4a3bd9d568e306c6e4a1b95fb959e
-  translated_at: 2026-07-03
+  source_sha256: af4a4eafb6682fd815dd81251ee43a30b6767b45ba8f586c6449e4113a504710
+  translated_at: 2026-10-04
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`gitops-argocd.md`](./gitops-argocd.md) fait foi.
@@ -60,7 +60,7 @@ workloads.
   `selfHeal: true`. **Les deux branches sont protégées — ne poussez jamais
   dessus directement ; créez une branche, une PR, mergez, et laissez ArgoCD
   converger.**
-- **Dépôt :** `https://github.com/arnaudmaillet/core-platform` pour toutes les sources.
+- **Dépôt :** `https://github.com/arnaudmaillet/core-platform-infra` pour toutes les sources.
 
 ---
 

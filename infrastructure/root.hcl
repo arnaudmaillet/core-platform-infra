@@ -13,7 +13,7 @@ locals {
   # Variables par défaut
   aws_region   = local.region_vars.locals.aws_region
 
-  repository_url = "https://github.com/arnaudmaillet/core-platform"
+  repository_url = "https://github.com/arnaudmaillet/core-platform-infra"
   repository_path = "infrastructure/argocd"
   target_revision = "develop"
 

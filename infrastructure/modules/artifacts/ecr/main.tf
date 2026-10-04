@@ -23,7 +23,7 @@ resource "aws_ecr_repository" "services" {
 
 # --- LIFECYCLE POLICY ---
 # Applied to every repository. Tag-aware, matching what the fleet CI pushes
-# (.github/workflows/fleet-images-deploy.yml): per-architecture images
+# (core-platform-backend: .github/workflows/fleet-images-deploy.yml): per-architecture images
 # `:<git-sha>-amd64` / `:<git-sha>-arm64`, the multi-arch manifest `:<git-sha>`
 # (the immutable deployment handle the staging overlay is pinned to) and a
 # floating env tag on the same manifest (`:staging`; `:prod` for the promote

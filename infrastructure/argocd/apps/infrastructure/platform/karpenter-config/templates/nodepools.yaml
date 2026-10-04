@@ -14,7 +14,7 @@ spec:
         name: default
       requirements:
         # --- ARCHITECTURE ---
-        # Both arches allowed: fleet-images-deploy.yml publishes multi-arch
+        # Both arches allowed: fleet-images-deploy.yml (core-platform-backend) publishes multi-arch
         # manifests (amd64 + arm64, stitch job verifies both platforms per
         # sha), so kubelet resolves the right image on Graviton — the
         # ImagePullBackOff that broke the first staging bring-up (amd64-only
