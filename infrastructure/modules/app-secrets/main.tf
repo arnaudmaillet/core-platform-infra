@@ -11,6 +11,7 @@
 #   * <name>-auth-secrets {ES256 signing PEM pair, keycloak_client_secret,
 #                          keycloak_admin_client_secret}
 #   * <name>-auth-smtp    {username, password}                     (SES SMTP, one-time email codes)
+#   * <name>-auth-sns     {access_key_id, secret_access_key}       (SNS SMS, one-time SMS codes)
 #
 # STAGING v1 PATH: static IAM keys (rusty-s3 cannot use IRSA web-identity) and the
 # env-KEK / signing key are GENERATED HERE and live in Terraform state. Prod's
@@ -267,8 +268,18 @@ resource "aws_secretsmanager_secret_version" "auth_secrets" {
 # (email-smtp.<region>.amazonaws.com:587, STARTTLS). SMTP credentials are an IAM
 # user's access key: the username is the key id, the password is derived from the
 # secret (aws_iam_access_key.ses_smtp_password_v4, region-specific). The user may
-# only send through the account-global domain identity (global/messaging/
-# ses-identity), and only as ses_from_address.
+# only send as ses_from_address (ses:FromAddress), an address of the account-global
+# domain identity (global/messaging/ses-identity).
+#
+# Resource is identity/* on purpose: while the account is in the SES SANDBOX, SES
+# also authorizes the send against the RECIPIENT's verified identity, so a policy
+# limited to the domain identity gets AccessDenied on every staging test send.
+# The From condition is what scopes the user.
+#
+# ROTATION (long-lived key, also in Terraform state): `terragrunt apply
+# -replace=aws_iam_access_key.auth_smtp` in data/app-secrets, then ESO refreshes
+# auth-smtp within 1h (or annotate the ExternalSecret `force-sync`), then restart
+# auth-server: envFrom is only read at pod start.
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -287,7 +298,7 @@ resource "aws_iam_user_policy" "auth_smtp" {
         Sid      = "SendAsNoReplyOnly"
         Effect   = "Allow"
         Action   = ["ses:SendRawEmail"]
-        Resource = ["arn:aws:ses:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:identity/${var.ses_sending_domain}"]
+        Resource = ["arn:aws:ses:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:identity/*"]
         Condition = {
           StringEquals = { "ses:FromAddress" = var.ses_from_address }
         }
@@ -311,5 +322,57 @@ resource "aws_secretsmanager_secret_version" "auth_smtp" {
   secret_string = jsonencode({
     username = aws_iam_access_key.auth_smtp.id
     password = aws_iam_access_key.auth_smtp.ses_smtp_password_v4
+  })
+}
+
+# ── auth: SNS static keys (one-time SMS codes, guest-mode B4c) ────────────────
+# auth signs its own SNS Publish calls (SigV4, static keys, like media/audit), so
+# it needs an IAM user. It may publish to PHONE NUMBERS ONLY: SMS publishes have
+# no resource ARN (Resource "*"), so the explicit Deny on every topic/endpoint ARN
+# keeps the key from reaching any SNS topic or app endpoint. Account-wide brakes
+# (spend limit, country allow-list, alarms) are in global/messaging/sms.
+# Rotation: same as auth_smtp above (-replace=aws_iam_access_key.auth_sns).
+resource "aws_iam_user" "auth_sns" {
+  name = "${var.name}-auth-sns"
+  tags = var.tags
+}
+
+resource "aws_iam_user_policy" "auth_sns" {
+  name = "sns-sms-codes"
+  user = aws_iam_user.auth_sns.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "PublishSms"
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = ["*"]
+      },
+      {
+        Sid      = "NoTopicsOrEndpoints"
+        Effect   = "Deny"
+        Action   = ["sns:Publish"]
+        Resource = ["arn:aws:sns:*:*:*"]
+      },
+    ]
+  })
+}
+
+resource "aws_iam_access_key" "auth_sns" {
+  user = aws_iam_user.auth_sns.name
+}
+
+resource "aws_secretsmanager_secret" "auth_sns" {
+  name                    = "${var.name}-auth-sns"
+  recovery_window_in_days = var.secret_recovery_window_days
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "auth_sns" {
+  secret_id = aws_secretsmanager_secret.auth_sns.id
+  secret_string = jsonencode({
+    access_key_id     = aws_iam_access_key.auth_sns.id
+    secret_access_key = aws_iam_access_key.auth_sns.secret
   })
 }

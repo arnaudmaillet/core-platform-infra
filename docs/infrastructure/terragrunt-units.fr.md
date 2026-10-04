@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./terragrunt-units.md
-  source_sha256: 459f13fb93297bb15daf4d5cffbc31e0718e3769268cb39f64e17e8b08171d50
+  source_sha256: 5a1f36bb6833f1098ff22ecdb5a59bc3cb5e2d4ef325b781acfadd0526a6a67e
   translated_at: 2026-10-05
   status: complete
 ---
@@ -31,9 +31,9 @@ infrastructure/
 ├── modules/                    # reusable Terraform modules (the "how")
 │   ├── networking/{vpc,route53}   eks   acm-cert   artifacts/ecr
 │   ├── elasticache   msk   opensearch   s3-bucket (generic; Object-Lock param)
-│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   ses-identity   kubernetes/argocd
+│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   ses-identity   sms-guardrails   kubernetes/argocd
 └── live/                       # Terragrunt instantiations (the "where/which")
-    ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr, messaging/ses-identity}  # account-shared
+    ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr, messaging/{ses-identity,sms}}  # account-shared
     ├── dev/us-east-1/…
     ├── staging/us-east-1/…     # ◄── documented here (the live path)
     └── prod/us-east-1/…        # full staging mirror, prod posture (not applied)
@@ -154,6 +154,7 @@ BASE=infrastructure/live/staging/us-east-1
 # --- Global (account-shared) ---
 ( cd infrastructure/live/global/artifacts/ecr && terragrunt apply )   # the authoritative ECR repo list
 ( cd infrastructure/live/global/messaging/ses-identity && terragrunt apply )   # SES domain identity (needs the route53 zone)
+( cd infrastructure/live/global/messaging/sms && terragrunt apply )            # SMS guardrails (needs the AWS CLI v2)
 ```
 
 > **Fiez-vous au Run Summary, pas au code de sortie.** `terragrunt run-all` /
@@ -223,4 +224,5 @@ le [runbook de reconstruction du staging jetable](../runbooks/staging-disposable
 | `artifacts/ecr` | `global/artifacts/ecr` (partagé au compte) |
 | `networking/route53` | `global/networking/route53` (partagé au compte) |
 | `ses-identity` | `global/messaging/ses-identity` (partagé au compte ; identité de domaine SES `core-platform.click` : Easy DKIM, MAIL FROM `mail.`, SPF, DMARC, liste de suppression. Les utilisateurs SMTP par env sont dans `app-secrets`) |
+| `sms-guardrails` | `global/messaging/sms` (partagé au compte ; préférences SMS SNS : plafond de dépenses, Transactional, logs de statut de livraison ; alarmes de dépenses → `core-platform-ops-alerts` ; liste de pays autorisés = protect configuration par défaut du compte via `scripts/sms-protect.sh`. Les utilisateurs SNS par env sont dans `app-secrets`) |
 | `security/account-slr` | `global/security/ec2-spot-slr` (partagé au compte ; rôle lié au service EC2 Spot — global au compte, sûr à la destruction, autrefois par-env dans `irsa-roles`) |

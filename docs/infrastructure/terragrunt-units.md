@@ -19,9 +19,9 @@ infrastructure/
 ├── modules/                    # reusable Terraform modules (the "how")
 │   ├── networking/{vpc,route53}   eks   acm-cert   artifacts/ecr
 │   ├── elasticache   msk   opensearch   s3-bucket (generic; Object-Lock param)
-│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   ses-identity   kubernetes/argocd
+│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   ses-identity   sms-guardrails   kubernetes/argocd
 └── live/                       # Terragrunt instantiations (the "where/which")
-    ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr, messaging/ses-identity}  # account-shared
+    ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr, messaging/{ses-identity,sms}}  # account-shared
     ├── dev/us-east-1/…
     ├── staging/us-east-1/…     # ◄── documented here (the live path)
     └── prod/us-east-1/…        # full staging mirror, prod posture (not applied)
@@ -139,6 +139,7 @@ BASE=infrastructure/live/staging/us-east-1
 # --- Global (account-shared) ---
 ( cd infrastructure/live/global/artifacts/ecr && terragrunt apply )   # the authoritative ECR repo list
 ( cd infrastructure/live/global/messaging/ses-identity && terragrunt apply )   # SES domain identity (needs the route53 zone)
+( cd infrastructure/live/global/messaging/sms && terragrunt apply )            # SMS guardrails (needs the AWS CLI v2)
 ```
 
 > **Trust the Run Summary, not the exit code.** `terragrunt run-all` / `run --all`
@@ -206,4 +207,5 @@ gotchas that outlive a `destroy`, is documented in the
 | `artifacts/ecr` | `global/artifacts/ecr` (account-shared) |
 | `networking/route53` | `global/networking/route53` (account-shared) |
 | `ses-identity` | `global/messaging/ses-identity` (account-shared; SES domain identity `core-platform.click`: Easy DKIM, MAIL FROM `mail.`, SPF, DMARC, suppression list. The per-env SMTP users live in `app-secrets`) |
+| `sms-guardrails` | `global/messaging/sms` (account-shared; SNS SMS preferences: spend limit, Transactional, delivery-status logs; spend alarms → `core-platform-ops-alerts`; country allow-list = account-default protect configuration via `scripts/sms-protect.sh`. The per-env SNS users live in `app-secrets`) |
 | `security/account-slr` | `global/security/ec2-spot-slr` (account-shared; EC2 Spot service-linked role — account-global, destroy-safe, formerly per-env in `irsa-roles`) |

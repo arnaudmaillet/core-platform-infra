@@ -25,12 +25,6 @@ variable "audit_kms_key_arn" {
   description = "ARN of the audit KEK (KMS). The audit static-key users need GenerateDataKey/Decrypt to write/read the SSE-KMS WORM objects. NOTE: distinct from the app-level env KEK (kek_base64) this module generates for crypto-shred."
 }
 
-variable "ses_sending_domain" {
-  type        = string
-  description = "SES domain identity auth sends one-time codes through (account-global, live/global/messaging/ses-identity). The auth SMTP user may only send through it."
-  default     = "core-platform.click"
-}
-
 variable "ses_from_address" {
   type        = string
   description = "The only From address the auth SMTP user may send as (ses:FromAddress). Must match the address in AUTH_SMTP_FROM (k8s/overlays/<env>/auth.env)."
