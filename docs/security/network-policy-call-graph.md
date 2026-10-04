@@ -202,7 +202,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | Service | Datastores / object store (egress) | gRPC callees | Kafka |
 |---|---|---|---|
 | account | CNPG `account` | — | producer |
-| auth | CNPG `auth`, Redis | account:50059 | producer |
+| auth | CNPG `auth`, Redis, **internet** (see below) | account:50059, profile:50052 | producer |
 | profile | CNPG, Redis, Scylla | — | both |
 | social-graph | CNPG, Redis, Scylla | — | both |
 | post | CNPG, Scylla | social-graph:50053 | both |
@@ -219,6 +219,15 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | search | **OpenSearch** | post:50056, profile:50052, social-graph:50053 | consumer |
 | audit (server+worker) | CNPG, **S3** (WORM/witness), KMS | — | consumer |
 | realtime (gateway+dispatcher) | Redis | auth:50060 (JWKS) | consumer |
+
+**auth's external egress** (guest-mode B4, core-platform-infra#12/#13/#14): the
+lockdown must keep these open from `auth-server`, or sign-up and sign-in break:
+- Sign in with Apple / Google id_token keys, **:443**: `appleid.apple.com`
+  (`/auth/keys`) and `www.googleapis.com` (`/oauth2/v3/certs`);
+- one-time email codes (SES SMTP), **:587**: `email-smtp.us-east-1.amazonaws.com`.
+  A VPC interface endpoint (`com.amazonaws.us-east-1.email-smtp`) keeps it private;
+- one-time SMS codes (SNS), **:443**: `sns.us-east-1.amazonaws.com`. A VPC
+  interface endpoint for SNS keeps it private.
 
 **Managed-AWS egress targets** (no pod IP — use ipBlock of the **private-data subnet
 CIDRs**): MSK :9096, ElastiCache :6379, OpenSearch :443. **S3** → via the S3 gateway
