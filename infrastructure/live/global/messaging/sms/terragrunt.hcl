@@ -35,7 +35,8 @@ inputs = {
 
   # Launch markets for SMS codes. Email and Sign in with Apple stay available
   # everywhere; SMS (the only per-message cost and the toll-fraud vector) is
-  # opened market by market. Keep in sync with auth's SMS country allow-list.
+  # opened market by market. MUST equal AUTH_SMS_COUNTRIES in
+  # k8s/overlays/<env>/auth.env (auth's own allow-list, core-platform-backend#732).
   #   * EU / EEA, the UK and Switzerland: alphanumeric sender ids or shared
   #     routes work without a dedicated number, at moderate per-SMS prices;
   #   * the French overseas departments (GP, GF, MQ, RE, YT) have their own ISO
