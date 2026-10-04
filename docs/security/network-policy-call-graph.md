@@ -63,6 +63,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `timeline` | `SocialGraphServiceClient` / `SocialGraphGrpcClient` | `social-graph:50053` | fan-out + cold rebuild |
 | `search` | `PostServiceClient` | `post:50056` | hydrate post docs |
 | `search` | `ProfileServiceClient` | `profile:50052` | hydrate profile docs |
+| `search` | `SocialGraphServiceClient` | `social-graph:50053` | query-path audience filter (`CheckAccess`) — degrades to hashtags only when unreachable |
 | `post` | `SocialGraphServiceClient` | `social-graph:50053` | audience check (`CheckAccess`) on non-author reads — **fail closed** |
 | `comment` | `PostServiceClient` + `SocialGraphServiceClient` | `post:50056`, `social-graph:50053` | read gate (`GetPost` + `CheckAccess`) on non-mesh reads — **fail closed** |
 | `media` | `ModerationServiceClient` | `moderation:50061` | **fail-closed Screen gate** |
@@ -73,7 +74,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | Callee | Allowed in-mesh callers | Port |
 |---|---|---|
 | `account` | `auth`, `moderation` | 50059 |
-| `social-graph` | `counter`, `timeline`, `post`, `comment` | 50053 |
+| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search` | 50053 |
 | `post` | `search`, `comment` | 50056 |
 | `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim) | 50052 |
 | `moderation` | `media` | 50061 |
@@ -208,7 +209,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | moderation | CNPG, Redis, Scylla | account:50059 | both |
 | media (server) | CNPG, Redis, **S3** (asset + object-store) | moderation:50061 | both |
 | media (worker) | CNPG, Redis, **S3** (renditions) | — | consumer |
-| search | **OpenSearch** | post:50056, profile:50052 | consumer |
+| search | **OpenSearch** | post:50056, profile:50052, social-graph:50053 | consumer |
 | audit (server+worker) | CNPG, **S3** (WORM/witness), KMS | — | consumer |
 | realtime (gateway+dispatcher) | Redis | auth:50060 (JWKS) | consumer |
 
