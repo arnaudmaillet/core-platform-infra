@@ -44,7 +44,7 @@ Applications and the workload fleet.
   the prod deploy, so the branch is the promotion gate. ArgoCD reconciles each
   cluster to its branch with `selfHeal: true`. **Both branches are protected —
   never push directly; branch, PR, merge, and let ArgoCD converge.**
-- **Repo:** `https://github.com/arnaudmaillet/core-platform` for every source.
+- **Repo:** `https://github.com/arnaudmaillet/core-platform-infra` for every source.
 
 ---
 

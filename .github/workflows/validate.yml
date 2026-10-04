@@ -1,0 +1,45 @@
+# .github/workflows/validate.yml
+#
+# PR gate for the infra repo: every Kustomize overlay must render and every
+# Terraform file must be `terraform fmt`-clean. Before the backend/infra repo
+# split nothing validated the manifests pre-merge — a broken overlay was first
+# seen by ArgoCD (selfHeal on develop).
+#
+# Rendering here is plain `kustomize build`: the staging/prod overlays carry
+# ${VAR} runtime endpoints that the argocd-repo-server `envsubst` CMP resolves
+# in-cluster, so unresolved ${VAR}s are expected and fine at this stage.
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  kustomize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        overlay: [dev, staging, prod]
+    steps:
+      - uses: actions/checkout@v4
+      - name: kustomize build k8s/overlays/${{ matrix.overlay }}
+        run: kubectl kustomize k8s/overlays/${{ matrix.overlay }} > /dev/null
+
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: terraform fmt -check
+        run: terraform fmt -check -recursive -diff infrastructure

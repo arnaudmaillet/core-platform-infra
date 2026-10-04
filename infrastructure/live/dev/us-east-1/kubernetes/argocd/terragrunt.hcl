@@ -54,7 +54,7 @@ inputs = {
   # "structured merge diff ... .status.terminatingReplicas" — found live 2026-09-15.)
   # The CMP sidecar image is derived from this pin in modules/kubernetes/argocd/server.
   argocd_version  = "10.9.1"
-  repository_url  = "https://github.com/arnaudmaillet/core-platform"
+  repository_url  = "https://github.com/arnaudmaillet/core-platform-infra"
   target_revision = "develop"
 
   # --- Paramètres du Cluster ---

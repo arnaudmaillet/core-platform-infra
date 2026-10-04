@@ -42,7 +42,7 @@ spec:
                   folder: infrastructure/argocd/apps/infrastructure/platform/keycloak
                   destNamespace: "keycloak"
           - git:
-              repoURL: https://github.com/arnaudmaillet/core-platform
+              repoURL: https://github.com/arnaudmaillet/core-platform-infra
               revision: main
               files:
                 - path: "infrastructure/argocd/bootstrap/global-params-prod.json"
@@ -54,7 +54,7 @@ spec:
     spec:
       project: default
       sources:
-        - repoURL: https://github.com/arnaudmaillet/core-platform
+        - repoURL: https://github.com/arnaudmaillet/core-platform-infra
           targetRevision: main
           path: "{{.folder}}"
           helm:
@@ -85,7 +85,7 @@ spec:
               - name: "aws-load-balancer-controller.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
                 value: "{{ .global.lbControllerRoleArn }}"
               # {{ end }}
-        - repoURL: https://github.com/arnaudmaillet/core-platform
+        - repoURL: https://github.com/arnaudmaillet/core-platform-infra
           targetRevision: main
           ref: values
       destination:

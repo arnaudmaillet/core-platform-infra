@@ -34,7 +34,7 @@ spec:
                   # MUST be `observability`: the fleet's OTLP endpoint DNS contract.
                   destNamespace: observability
           - git:
-              repoURL: https://github.com/arnaudmaillet/core-platform
+              repoURL: https://github.com/arnaudmaillet/core-platform-infra
               revision: develop
               files:
                 - path: "infrastructure/argocd/bootstrap/global-params-staging.json"
@@ -46,7 +46,7 @@ spec:
     spec:
       project: default
       sources:
-        - repoURL: https://github.com/arnaudmaillet/core-platform
+        - repoURL: https://github.com/arnaudmaillet/core-platform-infra
           targetRevision: develop
           path: '{{.folder}}'
           helm:
@@ -59,7 +59,7 @@ spec:
               # (empty → open; harmless no-op param for otel-collector).
               - name: "inboundCidrs"
                 value: "{{ .global.adminCidrs }}"
-        - repoURL: https://github.com/arnaudmaillet/core-platform
+        - repoURL: https://github.com/arnaudmaillet/core-platform-infra
           targetRevision: develop
           ref: values
       destination:

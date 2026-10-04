@@ -20,7 +20,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/arnaudmaillet/core-platform
+        repoURL: https://github.com/arnaudmaillet/core-platform-infra
         targetRevision: develop
         path: '{{.folder}}'
         directory:

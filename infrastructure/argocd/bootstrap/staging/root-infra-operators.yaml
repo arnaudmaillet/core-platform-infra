@@ -51,7 +51,7 @@ spec:
                   folder: infrastructure/argocd/apps/infrastructure/operators/keda
                   destNamespace: keda
           - git:
-              repoURL: https://github.com/arnaudmaillet/core-platform
+              repoURL: https://github.com/arnaudmaillet/core-platform-infra
               revision: develop
               files:
                 - path: "infrastructure/argocd/bootstrap/global-params-staging.json"
@@ -63,7 +63,7 @@ spec:
     spec:
       project: default
       sources:
-        - repoURL: https://github.com/arnaudmaillet/core-platform
+        - repoURL: https://github.com/arnaudmaillet/core-platform-infra
           targetRevision: develop
           path: '{{.folder}}'
           helm:
@@ -74,7 +74,7 @@ spec:
               - name: "external-secrets.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
                 value: "{{ .global.externalSecretsRoleArn }}"
               # {{ end }}
-        - repoURL: https://github.com/arnaudmaillet/core-platform
+        - repoURL: https://github.com/arnaudmaillet/core-platform-infra
           targetRevision: develop
           ref: values
       destination:

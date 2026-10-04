@@ -2,17 +2,20 @@
 #
 # Promotes the STAGING-verified immutable image pins into the PROD overlay.
 #
-# Why this exists: the fleet-images workflow pins k8s/overlays/staging to the
-# built :<git-sha> tags after CI passes; the prod overlay (k8s/overlays/prod)
-# ships :prod PLACEHOLDER tags. Prod ArgoCD tracks `main`, and "merging
-# develop → main is the prod deploy" — but that would deploy placeholders.
+# Why this exists: the fleet-images workflow (arnaudmaillet/core-platform-backend)
+# pins THIS repo's k8s/overlays/staging to the built :<git-sha> tags after CI
+# passes; the prod overlay (k8s/overlays/prod) ships :prod PLACEHOLDER tags.
+# Prod ArgoCD tracks this repo's `main`, and "merging develop → main (here) is
+# the prod deploy" — but that would deploy placeholders.
 # This job copies each staging image's current sha tag onto the same image in
 # the prod overlay, ON DEVELOP, so the standard develop→main promotion PR
 # carries the exact images staging has been running (and soak-verified).
 #
 # Deliberately MANUAL (workflow_dispatch): a prod release is an intentional act.
-# It writes to develop via FLEET_PIN_DEPLOY_KEY (the same deploy key the staging
-# pin job uses — develop's ruleset grants it a bypass), so NO change to main's
+# It writes to develop via FLEET_PIN_DEPLOY_KEY (the `fleet-pin` deploy key of
+# this repo — the backend's staging pin job pushes with the same key, stored
+# there as PLATFORM_PIN_DEPLOY_KEY; develop's ruleset grants DeployKey a
+# bypass), so NO change to main's
 # protection is needed. After it runs, open/refresh the develop→main PR to ship.
 name: Promote staging image pins to prod overlay
 

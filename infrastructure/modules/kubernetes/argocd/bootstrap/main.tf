@@ -80,7 +80,10 @@ YAML
 
 # --- DYNAMIC PARAMETERS (GIT SOURCE OF TRUTH) ---
 resource "github_repository_file" "argocd_params" {
-  repository = "core-platform"
+  # Derived from the ArgoCD source URL so the params land in the very repo the
+  # appsets read them from (was a hard-coded "core-platform" before the
+  # backend/infra repo split).
+  repository = trimsuffix(basename(var.repository_url), ".git")
   branch     = var.target_revision
   file       = "infrastructure/argocd/bootstrap/${var.global_params_file}"
 
