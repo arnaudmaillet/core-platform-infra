@@ -49,6 +49,10 @@ variable "keycloak_admin_url" {
   type    = string
   default = ""
 }
+variable "waf_edge_acl_arn" {
+  type    = string
+  default = ""
+}
 
 # Per-env bootstrap wiring (defaults preserve the original dev behavior).
 variable "bootstrap_path" {

@@ -22,6 +22,7 @@ locals {
     "AUTH_JWKS_URL",
     "KEYCLOAK_TOKEN_ENDPOINT",
     "KEYCLOAK_ADMIN_URL",
+    "WAF_EDGE_ACL_ARN",
   ]
 
   cmp_generate_script = <<-SH

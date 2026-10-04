@@ -48,6 +48,11 @@ variable "keycloak_admin_url" {
   default     = ""
   description = "Keycloak realm Admin API base, .../admin/realms/<realm> (CMP var KEYCLOAK_ADMIN_URL; empty = auth credential-management RPCs answer UNAVAILABLE)."
 }
+variable "waf_edge_acl_arn" {
+  type        = string
+  default     = ""
+  description = "ARN of the client-edge WAF Web ACL (security/waf-edge unit; CMP var WAF_EDGE_ACL_ARN, set on the client-edge Ingress). Empty for envs without the workload overlay (dev)."
+}
 
 # Per-env bootstrap wiring (defaults preserve the original single-env/dev behavior).
 variable "bootstrap_path" {

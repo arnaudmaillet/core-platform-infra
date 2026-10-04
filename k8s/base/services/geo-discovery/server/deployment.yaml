@@ -88,11 +88,10 @@ spec:
             # Filled by the fetch-geoip init container (absent = grants nothing).
             - name: GEO_GEOIP_MMDB_PATH
               value: /var/lib/geoip/country.mmdb
-            # Proxies that append to X-Forwarded-For before the pod: the ALB only.
-            # Putting a CDN or WAF proxy in front (CloudFront…) adds a hop: bump
-            # this to 2, or every guest gets the proxy's country.
-            - name: GEO_TRUSTED_PROXY_HOPS
-              value: "1"
+            # Trusted X-Forwarded-For hops: not set here on purpose. geo-discovery
+            # falls back to the fleet-wide GRPC_TRUSTED_PROXY_HOPS (set once for
+            # every edge server in the overlays' patch-client-edge-env.yaml), else
+            # 1. Set GEO_TRUSTED_PROXY_HOPS only to diverge from the fleet.
           ports:
             - name: grpc
               containerPort: 50054
