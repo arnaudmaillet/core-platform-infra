@@ -59,6 +59,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 |---|---|---|---|
 | `auth` | `AccountServiceClient` | `account:50059` | account lookup during issuance |
 | `moderation` | `AccountServiceClient` | `account:50059` | subject resolution |
+| `moderation` | `PostServiceClient` + `CommentServiceClient` + `ProfileServiceClient` | `post:50056`, `comment:50057`, `profile:50052` | client report target → owning account (`SubmitReport`) |
 | `counter` | `SocialGraphServiceClient` | `social-graph:50053` | follower/following reconcile |
 | `timeline` | `SocialGraphServiceClient` / `SocialGraphGrpcClient` | `social-graph:50053` | fan-out + cold rebuild |
 | `search` | `PostServiceClient` | `post:50056` | hydrate post docs |
@@ -76,14 +77,17 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 |---|---|---|
 | `account` | `auth`, `moderation` | 50059 |
 | `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery` | 50053 |
-| `post` | `search`, `comment` | 50056 |
-| `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim) | 50052 |
+| `post` | `search`, `comment`, `moderation` | 50056 |
+| `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim), `moderation` (report target → account) | 50052 |
 | `moderation` | `media` | 50061 |
 | `auth` | `realtime` | 50060 |
 | `auth` (JWKS, HTTP) | **every server pod** — all edge-token verifiers | 8081 |
 
+`comment` takes one in-mesh caller, `moderation` (report target lookup), on 50057:
+it is still in the same-namespace allow, not tightened.
+
 **No in-mesh inbound at all** (→ ingress = health probe only, + the **client
-edge** on :9443, §3): `chat`, `geo-discovery`, `notification`, `comment`,
+edge** on :9443, §3): `chat`, `geo-discovery`, `notification`,
 `engagement`, `timeline`, `search`, `media`, `counter-server`, and the workers
 `counter-worker`, `realtime-dispatcher`, `audit-worker`. `audit-server` takes only
 the break-glass `RecordPrivileged`/`Query` path (no normal-flow mesh caller).
@@ -207,7 +211,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | notification | CNPG, Redis, Scylla | — | consumer |
 | timeline | CNPG, Redis, Scylla | social-graph:50053 | consumer |
 | chat | CNPG, Redis, Scylla | — | producer |
-| moderation | CNPG, Redis, Scylla | account:50059 | both |
+| moderation | CNPG, Redis, Scylla | account:50059, post:50056, comment:50057, profile:50052 | both |
 | media (server) | CNPG, Redis, **S3** (asset + object-store) | moderation:50061 | both |
 | media (worker) | CNPG, Redis, **S3** (renditions) | — | consumer |
 | search | **OpenSearch** | post:50056, profile:50052, social-graph:50053 | consumer |

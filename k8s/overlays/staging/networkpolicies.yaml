@@ -58,8 +58,8 @@ spec:
         values:
           - account-server      # mesh callee  (auth, moderation)
           - social-graph-server # mesh callee  (counter-worker, timeline, post, comment, search, geo-discovery)
-          - post-server         # mesh callee  (search, comment)
-          - profile-server      # mesh callee  (search)
+          - post-server         # mesh callee  (search, comment, moderation)
+          - profile-server      # mesh callee  (search, auth, moderation)
           - moderation-server   # mesh callee  (media Screen)
           - auth-server         # mesh callee  (realtime JWKS)
           - audit-server        # TIER-0 — no normal-flow mesh ingress
@@ -184,9 +184,10 @@ spec:
   policyTypes: [Ingress]
   ingress:
     - from:
+        # moderation resolves whose post a client report targets (SubmitReport).
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [search-server, comment-server] }
+              - { key: app, operator: In, values: [search-server, comment-server, moderation-server] }
       ports:
         - { protocol: TCP, port: 50056 }
 ---
@@ -202,10 +203,11 @@ spec:
   ingress:
     - from:
         # search hydrates profile docs; auth lists the profiles an account owns
-        # at every token mint (the edge token's `pids` claim).
+        # at every token mint (the edge token's `pids` claim); moderation maps a
+        # reported post/comment's author profile to its account (SubmitReport).
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [search-server, auth-server] }
+              - { key: app, operator: In, values: [search-server, auth-server, moderation-server] }
       ports:
         - { protocol: TCP, port: 50052 }
 ---
