@@ -44,6 +44,37 @@ spec:
           envFrom:
             - configMapRef:
                 name: geo-discovery-config
+        # Country access (guest mode B10) needs the request's network country:
+        # fetch the DB-IP Lite country database (MaxMind DB format, CC BY 4.0 —
+        # "IP Geolocation by DB-IP", https://db-ip.com) for this month, else last
+        # month (published early in the month). Fail-soft: without it the server
+        # still serves the map and country access grants nothing. Refreshed at
+        # every rollout.
+        - name: fetch-geoip
+          image: public.ecr.aws/docker/library/alpine:3.20
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              y=$(date -u +%Y); m=$(date -u +%m); m=${m#0}
+              pm=$((m - 1)); py=$y
+              if [ "$pm" -eq 0 ]; then pm=12; py=$((y - 1)); fi
+              for ym in "$y-$(printf %02d "$m")" "$py-$(printf %02d "$pm")"; do
+                if wget -q -T 30 -O /geoip/country.mmdb.gz "https://download.db-ip.com/free/dbip-country-lite-$ym.mmdb.gz" \
+                  && gunzip -f /geoip/country.mmdb.gz; then
+                  echo "GeoIP: DB-IP Lite country $ym"; exit 0
+                fi
+              done
+              echo "GeoIP: download failed - country access will grant nothing" >&2
+              exit 0
+          volumeMounts:
+            - name: geoip
+              mountPath: /geoip
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "32Mi"
+            limits:
+              memory: "64Mi"
       containers:
         - name: server
           image: core-platform-geo-discovery-server
@@ -54,12 +85,18 @@ spec:
             # The runtime is fail-closed on this file; mounted from infra-config.
             - name: INFRA_CONFIG_PATH
               value: /etc/infra/infrastructure.toml
+            # Filled by the fetch-geoip init container (absent = grants nothing).
+            - name: GEO_GEOIP_MMDB_PATH
+              value: /var/lib/geoip/country.mmdb
           ports:
             - name: grpc
               containerPort: 50054
           volumeMounts:
             - name: infra-config
               mountPath: /etc/infra
+              readOnly: true
+            - name: geoip
+              mountPath: /var/lib/geoip
               readOnly: true
           # Readiness gates on backend reachability: the per-service health key is
           # driven by the runtime's storage probes (SERVING only once they pass),
@@ -92,3 +129,6 @@ spec:
         - name: infra-config
           configMap:
             name: infra-config
+        - name: geoip
+          emptyDir:
+            sizeLimit: 64Mi
