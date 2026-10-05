@@ -68,6 +68,10 @@ terragrunt run-all plan
 
 - **ArgoCD tracks `develop` with `selfHeal`.** `develop` is **protected** — branch
   off it, open a PR; don't commit/push to it directly.
+- **Push cadence on PR branches.** Commit locally; push only when the PR's
+  current CI run has finished, or when the work is ready for review. Every push
+  restarts the PR's CI, and hosted runner slots are shared across all of the
+  owner's repos (backend and iOS fan-outs included).
 - **Apply order matters.** Terraform must run before the workloads sync: the
   staging overlay's runtime endpoints are resolved by an `envsubst` Config
   Management Plugin in `argocd-repo-server` (fed by a Terraform-written Secret), and
