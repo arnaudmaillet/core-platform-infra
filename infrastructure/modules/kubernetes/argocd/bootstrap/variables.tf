@@ -53,6 +53,11 @@ variable "waf_edge_acl_arn" {
   default     = ""
   description = "ARN of the client-edge WAF Web ACL (security/waf-edge unit; CMP var WAF_EDGE_ACL_ARN, set on the client-edge Ingress). Empty for envs without the workload overlay (dev)."
 }
+variable "media_cloudfront_distribution_id" {
+  type        = string
+  default     = ""
+  description = "Media CDN distribution id (networking/media-cdn; CMP var MEDIA_CLOUDFRONT_DISTRIBUTION_ID, media's takedown purges). Empty for envs without the workload overlay (dev)."
+}
 
 # Per-env bootstrap wiring (defaults preserve the original single-env/dev behavior).
 variable "bootstrap_path" {

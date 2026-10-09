@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./terragrunt-units.md
-  source_sha256: 62b13b38c57a393e7d210ed98da4076e6bc971a1922e9b418688b9722f09ff3b
+  source_sha256: faf984a88f912d92ac27a251b21eef3d7a0e24d6b95d69e28ede8116a9d03579
   translated_at: 2026-10-09
   status: complete
 ---
@@ -31,7 +31,7 @@ infrastructure/
 ├── modules/                    # reusable Terraform modules (the "how")
 │   ├── networking/{vpc,route53}   eks   acm-cert   artifacts/ecr
 │   ├── elasticache   msk   opensearch   s3-bucket (generic; Object-Lock param)
-│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   ses-identity   sms-guardrails   app-site-association   kubernetes/argocd
+│   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   media-cdn   ses-identity   sms-guardrails   app-site-association   kubernetes/argocd
 └── live/                       # Terragrunt instantiations (the "where/which")
     ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr, messaging/{ses-identity,sms},
     │          networking/route53-wynn-cn, web/wynn-cn-aasa}  # account-shared
@@ -77,7 +77,8 @@ Level 3:   security/irsa-roles ─────────► (eks, audit-kms, a
         │
 Level 4:   kubernetes/argocd ───────────► (vpc, eks, security/irsa-roles,
                                             msk, elasticache, opensearch,
-                                            acm-cert, app-secrets, waf-edge)
+                                            acm-cert, app-secrets, waf-edge,
+                                            media-cdn)
 ```
 
 > **L'arête porteuse :** `security/irsa-roles` dépend des **ARN des datastores**
@@ -126,7 +127,8 @@ Légende : **Module** = module sous-jacent · **Depends on** = unités consommé
 |---|---|---|---|
 | **`security/irsa-roles`** | `security/irsa-roles` | `eks`, `audit-kms`, `audit-worm`, `media-bucket`, `cnpg-backups` | Les rôles IRSA : ESO, Karpenter, LB controller, external-dns, cert-manager, EBS CSI, et les rôles applicatifs (audit=seul principal KMS/WORM, media=RW du bucket). → ARN par rôle. |
 | **`security/waf-edge`** | `waf-edge` | — | Web ACL AWS WAF (REGIONAL) de l'ALB client-edge : règles de débit par IP (tout l'edge + `StartGuestSession`), règles managées AWS IP reputation / known bad inputs / common rule set (en count par défaut), Bot Control derrière un flag ; logs CloudWatch (`authorization` masqué). → `web_acl_arn`, passé au CMP en `WAF_EDGE_ACL_ARN` et associé par le LB controller depuis l'annotation de l'Ingress. |
-| **`kubernetes/argocd`** | `kubernetes/argocd` | `vpc`, `eks`, `security/irsa-roles`, `msk`, `elasticache`, `opensearch`, `acm-cert`, `app-secrets`, `waf-edge` | Installe ArgoCD + `root-bootstrap` (cible `bootstrap/staging`). Écrit **`cmp-envsubst-values`** (endpoints des datastores et ARN de l'ACL WAF pour le CMP) et **`global-params-staging.json`**. Porte le **`before_hook` de graceful-cleanup sur `destroy`**. |
+| **`networking/media-cdn`** | `media-cdn` | `media-bucket`, `acm-cert`, `app-secrets` | CloudFront (OAC) devant le bucket média, alias `media[-staging].core-platform.click` : cache immuable 1 an, GET/HEAD, HTTPS seulement. **Possède la bucket policy du bucket média** (lecture CDN ; Deny explicite sur `quarantine/`, `uploads/`, `private/`) et accorde `cloudfront:CreateInvalidation` à l'utilisateur IAM media. → `distribution_id`, passé au CMP en `MEDIA_CLOUDFRONT_DISTRIBUTION_ID`. |
+| **`kubernetes/argocd`** | `kubernetes/argocd` | `vpc`, `eks`, `security/irsa-roles`, `msk`, `elasticache`, `opensearch`, `acm-cert`, `app-secrets`, `waf-edge`, `media-cdn` | Installe ArgoCD + `root-bootstrap` (cible `bootstrap/staging`). Écrit **`cmp-envsubst-values`** (endpoints des datastores et ARN de l'ACL WAF pour le CMP) et **`global-params-staging.json`**. Porte le **`before_hook` de graceful-cleanup sur `destroy`**. |
 
 > L'unité `kubernetes/argocd` est la couture entre Terraform et GitOps : c'est la
 > *dernière* unité Terraform et la *première* chose qui passe la main à ArgoCD (voir le
@@ -224,6 +226,7 @@ le [runbook de reconstruction du staging jetable](../runbooks/staging-disposable
 | `app-secrets` | `data/app-secrets` |
 | `security/irsa-roles` | `security/irsa-roles` |
 | `waf-edge` | `security/waf-edge` (staging, prod) |
+| `media-cdn` | `networking/media-cdn` (staging, prod) |
 | `kubernetes/argocd` | `kubernetes/argocd` |
 | `artifacts/ecr` | `global/artifacts/ecr` (partagé au compte) |
 | `networking/route53` | `global/networking/route53` (partagé au compte) · `global/networking/route53-wynn-cn` (le domaine web de l'app iOS) |

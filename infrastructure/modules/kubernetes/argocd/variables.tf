@@ -53,6 +53,10 @@ variable "waf_edge_acl_arn" {
   type    = string
   default = ""
 }
+variable "media_cloudfront_distribution_id" {
+  type    = string
+  default = ""
+}
 
 # Per-env bootstrap wiring (defaults preserve the original dev behavior).
 variable "bootstrap_path" {

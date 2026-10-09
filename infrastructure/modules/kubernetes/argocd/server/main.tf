@@ -23,6 +23,7 @@ locals {
     "KEYCLOAK_TOKEN_ENDPOINT",
     "KEYCLOAK_ADMIN_URL",
     "WAF_EDGE_ACL_ARN",
+    "MEDIA_CLOUDFRONT_DISTRIBUTION_ID",
   ]
 
   cmp_generate_script = <<-SH

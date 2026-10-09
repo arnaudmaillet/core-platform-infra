@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./README.md
-  source_sha256: c5bf26af0cd245eddc2c4d6dae65f8038d42c9a3ed50acd44d5b55bf1417f1b5
+  source_sha256: f971e47e71a7facc4a44828b3a30d3256c25ac5d061e871bd68b0952d83c0990
   translated_at: 2026-10-09
   status: complete
 ---
@@ -168,7 +168,7 @@ Terragrunt résout le DAG via `run-all apply` ; l'ordre explicite (chacun consom
 
 ### 3.3 Étapes manuelles et substituts (placeholders)
 
-Les substituts d'endpoint (`<<…>>`) sont remplacés à partir des sorties Terragrunt au moment du déploiement (dans les fichiers `.env` et les patches de scaler KEDA) : `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (TLS du NLB), `<<WAF_EDGE_ACL_ARN>>` (WAF de l'ALB client-edge), `<<KEYCLOAK_TOKEN_ENDPOINT>>`, `<<KEYCLOAK_ADMIN_URL>>`, `<<AUTH_JWKS_URL>>`. De plus : provisionner les secrets du §3.2 ; vérifier que chaque topic mis à l'échelle sur retard dispose de **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6) ; construire/pousser les images via la CI `fleet-images-deploy` vers `:staging`.
+Les substituts d'endpoint (`<<…>>`) sont remplacés à partir des sorties Terragrunt au moment du déploiement (dans les fichiers `.env` et les patches de scaler KEDA) : `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (TLS du NLB), `<<WAF_EDGE_ACL_ARN>>` (WAF de l'ALB client-edge), `<<MEDIA_CLOUDFRONT_DISTRIBUTION_ID>>` (purges CDN des retraits de médias), `<<KEYCLOAK_TOKEN_ENDPOINT>>`, `<<KEYCLOAK_ADMIN_URL>>`, `<<AUTH_JWKS_URL>>`. De plus : provisionner les secrets du §3.2 ; vérifier que chaque topic mis à l'échelle sur retard dispose de **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6) ; construire/pousser les images via la CI `fleet-images-deploy` vers `:staging`.
 
 ### 3.4 Mises en garde Jour-1 et reports connus
 

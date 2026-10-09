@@ -78,7 +78,8 @@ sequence:
 #    global/networking/route53-wynn-cn → delegate wynn.cn's NS at the registrar →
 #    global/web/wynn-cn-aasa (its ACM validation waits on the delegation).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
-#    security/{irsa-roles,waf-edge} → kubernetes/argocd). GITHUB_TOKEN is required —
+#    security/{irsa-roles,waf-edge} → networking/media-cdn → kubernetes/argocd).
+#    GITHUB_TOKEN is required —
 #    the argocd unit registers the repo with ArgoCD.
 ( cd $BASE && GITHUB_TOKEN=$(gh auth token) \
     terragrunt run --all apply --non-interactive --backend-bootstrap -- -auto-approve )
@@ -107,6 +108,10 @@ kubectl apply -k k8s/base/infra/scylla-cluster
   fleet syncs: the client-edge Ingress carries `wafv2-acl-arn: ${WAF_EDGE_ACL_ARN}`.
   A literal `${WAF_EDGE_ACL_ARN}` makes the LB controller fail to reconcile the
   Ingress, so the **whole client-edge ALB** breaks, not just the WAF.
+- `networking/media-cdn` applies **before** `kubernetes/argocd` too: media gets
+  `MEDIA_CLOUDFRONT_DISTRIBUTION_ID` from the CMP, and with a literal `${…}` every
+  takedown purge fails, so takedowns keep retrying. The unit grants the purge
+  right first, then the id reaches media.
 - **wallet-server (new service, core-platform-infra#41):**
   - `global/artifacts/ecr` must have created `core-platform-wallet-server`, and the
     backend must have added `wallet-server` to `FLEET_BINS` with a pin landed since.

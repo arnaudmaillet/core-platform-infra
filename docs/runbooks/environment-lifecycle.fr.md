@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: 06acf4f4f604eb4f66126c4ed7cb7e1393214732ee9fc8d91e965fbc72d8c9e8
+  source_sha256: 9bf3d68f54930c4dedbe8c594742c3a039892e6d17666912e2cedd13f7714f23
   translated_at: 2026-10-09
   status: complete
 ---
@@ -94,7 +94,8 @@ La séquence au niveau boucle :
 #    global/networking/route53-wynn-cn → delegate wynn.cn's NS at the registrar →
 #    global/web/wynn-cn-aasa (its ACM validation waits on the delegation).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
-#    security/{irsa-roles,waf-edge} → kubernetes/argocd). GITHUB_TOKEN is required —
+#    security/{irsa-roles,waf-edge} → networking/media-cdn → kubernetes/argocd).
+#    GITHUB_TOKEN is required —
 #    the argocd unit registers the repo with ArgoCD.
 ( cd $BASE && GITHUB_TOKEN=$(gh auth token) \
     terragrunt run --all apply --non-interactive --backend-bootstrap -- -auto-approve )
@@ -127,6 +128,10 @@ défaillance) :**
   `wafv2-acl-arn: ${WAF_EDGE_ACL_ARN}`. Un `${WAF_EDGE_ACL_ARN}` littéral empêche le
   LB controller de réconcilier l'Ingress : c'est **tout l'ALB client-edge** qui
   casse, pas seulement le WAF.
+- `networking/media-cdn` s'applique aussi **avant** `kubernetes/argocd` : media reçoit
+  `MEDIA_CLOUDFRONT_DISTRIBUTION_ID` du CMP, et avec un `${…}` littéral chaque purge
+  de retrait échoue, donc les retraits sont retentés sans fin. L'unité accorde
+  d'abord le droit de purge, puis l'id arrive à media.
 - **wallet-server (nouveau service, core-platform-infra#41) :**
   - `global/artifacts/ecr` doit avoir créé `core-platform-wallet-server`, et le
     backend doit avoir ajouté `wallet-server` à `FLEET_BINS`, avec un pin arrivé

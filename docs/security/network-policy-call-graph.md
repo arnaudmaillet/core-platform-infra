@@ -36,7 +36,7 @@ Derived from code + config, not guesswork:
 | 50070 | timeline | client-facing (read) |
 | 50061 | moderation | **mesh callee** (Screen) |
 | 50062 | search | client-facing (read) |
-| 50063 | media | client-facing |
+| 50063 | media | **mesh callee** (account, profile) + client-facing |
 | 50064 | counter-server | client-facing (read) |
 | 50065 | counter-worker | worker (health only) |
 | 50066 / 8443 | realtime-gateway | internal health / **public WSS** |
@@ -82,6 +82,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `wallet` | post, comment, social-graph clients | `post:50056`, `comment:50057`, `social-graph:50053` | a like (`Stake`) checks its target exists and is visible to the one who likes |
 | `wallet` | `EngagementServiceClient` | `engagement:50058` | stake settlement (`GetLikePositions`, shadow mode) |
 | `geo-discovery`, `account` | `WalletServiceClient` | `wallet:50072` | country unlocks (`GetWallet`, `SpendGems`); GDPR export (`wallet.json`) |
+| `profile` | `MediaServiceClient` | `media:50063` | verification documents: the requester's own, READY (`GetAsset`) |
 
 ### Inbound matrix (who a policy must allow)
 
@@ -94,6 +95,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `moderation` | `media`, `account` | 50061 |
 | `auth` | `realtime` | 50060 |
 | `wallet` | `geo-discovery`, `account` **only** (`SpendGems` has no caller gate yet, backend#852) | 50072 |
+| `media` | `account` (GDPR export, `ListAssetsByOwner`), `profile` (verification documents, `GetAsset`) **only**: `GetPrivateDocumentUrl` signs links to ID documents | 50063 |
 | `auth` (JWKS, HTTP) | **every server pod** — all edge-token verifiers | 8081 |
 
 `comment` takes one in-mesh caller, `moderation` (report target lookup), on 50057,
