@@ -106,6 +106,9 @@ configMapGenerator:
     envs: [realtime.env]
   - name: infra-config
     files: [infrastructure.toml]
+  # Offensive-term list shared by comment and chat (patch-offensive-terms.yaml).
+  - name: offensive-terms
+    files: [offensive-terms.txt]
 images:
   - name: core-platform-chat-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-chat-server
@@ -193,6 +196,12 @@ patches:
       kind: Service
       labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server)"
   # Inject the synced MSK/Redis creds into every service container.
+  # One offensive-term list for comment (hidden comments) and chat (message
+  # requests): a shared ConfigMap mounted in both, same path, same env.
+  - path: patch-offensive-terms.yaml
+    target:
+      kind: Deployment
+      labelSelector: "app in (comment-server,chat-server)"
   - path: patch-backend-creds.yaml
     target:
       kind: Deployment

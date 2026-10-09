@@ -1,0 +1,16 @@
+# k8s/overlays/staging/offensive-terms.txt
+#
+# The fleet's offensive-term list (operator-provided, core-platform-backend
+# text-filter): ONE list for comment (COMMENT_OFFENSIVE_TERMS_FILE, hidden
+# comments) and chat (CHAT_OFFENSIVE_TERMS_FILE, message requests, #810).
+# Mounted at /etc/text-filter/offensive-terms.txt by patch-offensive-terms.yaml.
+#
+# Format: one term per line, `#` comments. Case-insensitive. A term with a
+# letter or a digit matches WHOLE words (a phrase matches those words in a row);
+# a term with neither (an emoji) matches anywhere.
+#
+# Read once at boot: editing this file changes the ConfigMap hash, which rolls
+# comment-server and chat-server. Empty = the offensive filter hides nothing
+# beyond each member's own hidden words (today's behaviour).
+#
+# The terms themselves are a moderation decision for the owner: add them below.
