@@ -1,0 +1,31 @@
+# k8s/overlays/prod/patch-notification-apns.yaml
+#
+# APNs key into notification-server (#39): the .p8 as a file, its key id as env.
+# Both `optional`: until the owner fills the secret, push stays off and the pod
+# starts as before. The key is read at boot: after filling it, wait for ESO's
+# refresh (or force-sync) and restart notification-server.
+- op: add
+  path: /spec/template/spec/volumes/-
+  value:
+    name: apns-key
+    secret:
+      secretName: notification-apns
+      optional: true
+      items:
+        - key: key.p8
+          path: key.p8
+- op: add
+  path: /spec/template/spec/containers/0/volumeMounts/-
+  value:
+    name: apns-key
+    mountPath: /var/run/secrets/apns
+    readOnly: true
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: NOTIFICATION_APNS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: notification-apns
+        key: NOTIFICATION_APNS_KEY_ID
+        optional: true

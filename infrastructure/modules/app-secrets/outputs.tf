@@ -35,6 +35,11 @@ output "account_exports_secret_arn" {
   value       = aws_secretsmanager_secret.account_exports.arn
 }
 
+output "notification_apns_secret_arn" {
+  description = "ARN of the APNs key secret (owner-filled)."
+  value       = aws_secretsmanager_secret.notification_apns.arn
+}
+
 output "auth_secrets_secret_arn" {
   description = "ARN of the auth signing/Keycloak secret."
   value       = aws_secretsmanager_secret.auth_secrets.arn
