@@ -1,0 +1,27 @@
+# k8s/overlays/prod/patch-offensive-terms.yaml
+#
+# Mounts the shared offensive-term list (ConfigMap offensive-terms, from
+# offensive-terms.txt) into comment-server and chat-server and points both
+# services at it. Same file for both: one list to maintain.
+- op: add
+  path: /spec/template/spec/volumes/-
+  value:
+    name: offensive-terms
+    configMap:
+      name: offensive-terms
+- op: add
+  path: /spec/template/spec/containers/0/volumeMounts/-
+  value:
+    name: offensive-terms
+    mountPath: /etc/text-filter
+    readOnly: true
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: COMMENT_OFFENSIVE_TERMS_FILE
+    value: /etc/text-filter/offensive-terms.txt
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: CHAT_OFFENSIVE_TERMS_FILE
+    value: /etc/text-filter/offensive-terms.txt
