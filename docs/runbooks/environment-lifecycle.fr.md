@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: 40c3f6c2950081d791e63c15a5b256d49b135308c5a548dac45f39d600f7081c
+  source_sha256: 06acf4f4f604eb4f66126c4ed7cb7e1393214732ee9fc8d91e965fbc72d8c9e8
   translated_at: 2026-10-09
   status: complete
 ---
@@ -127,6 +127,18 @@ défaillance) :**
   `wafv2-acl-arn: ${WAF_EDGE_ACL_ARN}`. Un `${WAF_EDGE_ACL_ARN}` littéral empêche le
   LB controller de réconcilier l'Ingress : c'est **tout l'ALB client-edge** qui
   casse, pas seulement le WAF.
+- **wallet-server (nouveau service, core-platform-infra#41) :**
+  - `global/artifacts/ecr` doit avoir créé `core-platform-wallet-server`, et le
+    backend doit avoir ajouté `wallet-server` à `FLEET_BINS`, avec un pin arrivé
+    depuis. D'ici là, les deux pods wallet restent en `ImagePullBackOff` et l'App de
+    la flotte est Degraded ; le reste de la flotte n'est pas touché.
+  - `security/irsa-roles` s'applique avant la synchro de la flotte : la confiance du
+    backup CNPG est une liste exacte, et sans `default:<env>-wallet-postgres`
+    l'archivage WAL vers S3 échoue.
+- **Promotion prod :** lancez `prod-promote` avant tout develop → main. L'overlay
+  prod nomme des topics, consumer groups et services (wallet.v1.events,
+  counter-stake-aggregator, wallet-server) que seules les images au niveau du pin
+  staging (ou après) possèdent.
 - **Sandboxes SES / SNS (une fois, par compte, manuel).** Tant que l'accès production
   n'est pas accordé, SES n'envoie qu'aux adresses vérifiées et SNS qu'aux numéros
   vérifiés, ce qui suffit pour les tests staging. Avant l'arrivée de vrais

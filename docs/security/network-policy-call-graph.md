@@ -43,6 +43,7 @@ Derived from code + config, not guesswork:
 | 50067 | realtime-dispatcher | worker (health only) |
 | 50068 | audit-server | TIER-0 (break-glass RecordPrivileged + Query) |
 | 50069 | audit-worker | worker (health only) |
+| 50072 | wallet | **mesh callee** (TIER-0 ledger) + client-facing |
 
 > ✅ **Resolved (side-finding):** `auth` and `timeline` previously both listened on
 > `50060`. Distinct ClusterIPs so it worked, but it broke the one-port-per-service
@@ -78,17 +79,21 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `account` | `ProfileServiceClient` + `SocialGraphServiceClient` | `profile:50052`, `social-graph:50053` | `FindProfilesByContacts` (address-book matching); GDPR export |
 | `account` | post, comment, engagement, chat, media, search clients | `post:50056`, `comment:50057`, `engagement:50058`, `chat:50051`, `media:50063`, `search:50062` | GDPR data export pass (off until `ACCOUNT_EXPORT_BUCKET` is set) |
 | `account` | `ModerationServiceClient` | `moderation:50061` | a supervised teen's reports for their supervisor (`ListReportsByReporter`) |
+| `wallet` | post, comment, social-graph clients | `post:50056`, `comment:50057`, `social-graph:50053` | a like (`Stake`) checks its target exists and is visible to the one who likes |
+| `wallet` | `EngagementServiceClient` | `engagement:50058` | stake settlement (`GetLikePositions`, shadow mode) |
+| `geo-discovery`, `account` | `WalletServiceClient` | `wallet:50072` | country unlocks (`GetWallet`, `SpendGems`); GDPR export (`wallet.json`) |
 
 ### Inbound matrix (who a policy must allow)
 
 | Callee | Allowed in-mesh callers | Port |
 |---|---|---|
 | `account` | `auth`, `moderation` | 50059 |
-| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account` | 50053 |
-| `post` | `search`, `comment`, `moderation`, `engagement`, `counter-server`, `account` | 50056 |
+| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account`, `wallet` | 50053 |
+| `post` | `search`, `comment`, `moderation`, `engagement`, `counter-server`, `account`, `wallet` | 50056 |
 | `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim), `moderation` (report target → account), `account`, `notification` | 50052 |
 | `moderation` | `media`, `account` | 50061 |
 | `auth` | `realtime` | 50060 |
+| `wallet` | `geo-discovery`, `account` **only** (`SpendGems` has no caller gate yet, backend#852) | 50072 |
 | `auth` (JWKS, HTTP) | **every server pod** — all edge-token verifiers | 8081 |
 
 `comment` takes one in-mesh caller, `moderation` (report target lookup), on 50057,
@@ -226,6 +231,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | search | **OpenSearch** | post:50056, profile:50052, social-graph:50053 | consumer |
 | audit (server+worker) | CNPG, **S3** (WORM/witness), KMS | — | consumer |
 | realtime (gateway+dispatcher) | Redis | auth:50060 (JWKS) | consumer |
+| wallet | CNPG `wallet` | post:50056, comment:50057, social-graph:50053, engagement:50058 | both |
 
 **auth's external egress** (guest-mode B4, core-platform-infra#12/#13/#14): the
 lockdown must keep these open from `auth-server`, or sign-up and sign-in break:

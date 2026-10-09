@@ -1,0 +1,17 @@
+# k8s/base/services/wallet/server/pdb.yaml
+#
+# Keep at least one wallet-server pod serving during voluntary disruptions (node
+# drains, Karpenter consolidation, rollouts): TIER-0, a ledger outage refuses
+# every like and claim.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wallet-server
+  labels:
+    app: wallet-server
+    role: server
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: wallet-server

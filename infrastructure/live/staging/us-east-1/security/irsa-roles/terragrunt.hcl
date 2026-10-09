@@ -83,6 +83,7 @@ inputs = {
     "default:staging-moderation-postgres",
     "default:staging-auth-postgres",
     "default:staging-media-postgres",
+    "default:staging-wallet-postgres",
     # Restore-drill scratch cluster (docs/runbooks): CNPG names the SA after the
     # cluster, and the trust list is exact-match — without this entry a recovery
     # bootstrap can't read the backup bucket (barman exit 4, found live on the

@@ -70,3 +70,14 @@ spec:
   method: barmanObjectStore
   cluster:
     name: media-postgres
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: wallet-postgres-backup
+spec:
+  schedule: "0 0 2 * * *"
+  backupOwnerReference: self
+  method: barmanObjectStore
+  cluster:
+    name: wallet-postgres

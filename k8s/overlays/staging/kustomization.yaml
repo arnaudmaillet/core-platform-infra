@@ -37,6 +37,7 @@ resources:
   - ../../base/services/audit/worker
   - ../../base/services/auth/server
   - ../../base/services/media/server
+  - ../../base/services/wallet/server
   - ../../base/services/media/worker
   - ../../base/services/moderation/server
   - ../../base/services/search/server
@@ -57,6 +58,7 @@ resources:
   - moderation-postgres.yaml
   - auth-postgres.yaml
   - media-postgres.yaml
+  - wallet-postgres.yaml
   # Nightly base backups for the CNPG clusters (barmanObjectStore -> S3).
   - scheduledbackups.yaml
   # IRSA-annotated ServiceAccounts (audit-server/-worker, media-server).
@@ -98,6 +100,8 @@ configMapGenerator:
     envs: [auth.env]
   - name: media-config
     envs: [media.env]
+  - name: wallet-config
+    envs: [wallet.env]
   - name: moderation-config
     envs: [moderation.env]
   - name: search-config
@@ -165,6 +169,11 @@ images:
   - name: core-platform-media-server
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-media-server
     newTag: c152367e4be074f5e211f2de113faac7e0337d2f
+  # New service (#41): the fleet pin moves this tag once wallet-server is in the
+  # backend's FLEET_BINS; until the first build, no image exists at this tag.
+  - name: core-platform-wallet-server
+    newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-wallet-server
+    newTag: c152367e4be074f5e211f2de113faac7e0337d2f
   - name: core-platform-media-worker
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-media-worker
     newTag: c152367e4be074f5e211f2de113faac7e0337d2f
@@ -190,11 +199,11 @@ patches:
   - path: patch-client-edge-env.yaml
     target:
       kind: Deployment
-      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server)"
+      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server,wallet-server)"
   - path: patch-client-edge-service-port.yaml
     target:
       kind: Service
-      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server)"
+      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server,wallet-server)"
   # Inject the synced MSK/Redis creds into every service container.
   # One offensive-term list for comment (hidden comments) and chat (message
   # requests): a shared ConfigMap mounted in both, same path, same env.
@@ -223,6 +232,7 @@ patches:
   - path: patch-moderation-db.yaml
   - path: patch-auth-db.yaml
   - path: patch-media-db.yaml
+  - path: patch-wallet-db.yaml
   - path: patch-media-worker-db.yaml
   # MSK SASL/SCRAM + TLS + TriggerAuthentication for the KEDA lag scalers.
   - path: patch-counter-worker-scaler.yaml

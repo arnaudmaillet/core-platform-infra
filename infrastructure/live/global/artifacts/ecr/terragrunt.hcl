@@ -52,5 +52,9 @@ inputs = {
     "search-server",
     "realtime-gateway",
     "realtime-dispatcher",
+    # ── Economy (core-platform-backend #665, core-platform-infra#41) ─────────
+    # Applied BEFORE the backend adds it to FLEET_BINS (a push to a missing
+    # repo fails the fleet build).
+    "wallet-server",
   ]
 }
