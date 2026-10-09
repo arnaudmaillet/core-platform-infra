@@ -64,7 +64,9 @@ inputs = {
   scylla_backups_bucket_arn = dependency.scylla_backups.outputs.bucket_arn
   gdpr_exports_bucket_arn   = dependency.gdpr_exports.outputs.bucket_arn
 
-  # Losing the MFA seed key locks every 2FA account out of sign-in.
+  # Losing the MFA seed key locks every 2FA account out of sign-in. Set from the
+  # first apply on purpose: flipping it later needs a state mv first
+  # (modules/app-secrets/main.tf, above random_bytes.auth_mfa_seed).
   protect_mfa_seed_key = true
 
   tags = {

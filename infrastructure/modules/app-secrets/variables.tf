@@ -38,7 +38,7 @@ variable "gdpr_exports_bucket_arn" {
 
 variable "protect_mfa_seed_key" {
   type        = bool
-  description = "prevent_destroy on the auth MFA seed key and its secret. true in prod: losing the key locks every 2FA account out. false where the env (and its accounts) is disposable, like staging."
+  description = "prevent_destroy on the auth MFA seed key and its secret. true in prod: losing the key locks every 2FA account out. false where the env (and its accounts) is disposable, like staging. Set it BEFORE the first apply. Flipping it false -> true on an env whose key already exists changes the resources' addresses: a plain apply would DESTROY AND REGENERATE the key. Move the state first (see the comment above random_bytes.auth_mfa_seed in main.tf)."
   default     = false
 }
 
