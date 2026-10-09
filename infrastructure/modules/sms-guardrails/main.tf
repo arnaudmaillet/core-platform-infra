@@ -14,7 +14,8 @@
 #     set as the ACCOUNT DEFAULT (the only way it applies to SNS), BLOCKing every
 #     destination outside `allowed_countries` (scripts/sms-protect.sh, local-exec:
 #     the provider has no resource for it, so the applier needs the AWS CLI v2).
-#   * Delivery-status logging to CloudWatch Logs.
+#   * Delivery-status logging to CloudWatch Logs (optional, enable_delivery_status_logs:
+#     the applier then needs iam:PassRole on the role).
 #
 # ACCOUNT + REGION scoped, so this lives in `live/global`. The per-env sender (an
 # IAM user allowed to publish to phone numbers only) is in modules/app-secrets.
@@ -33,15 +34,16 @@ locals {
 }
 
 resource "aws_cloudwatch_log_group" "sms_delivery" {
-  for_each          = toset([local.sms_log_prefix, "${local.sms_log_prefix}/Failure"])
+  for_each          = var.enable_delivery_status_logs ? toset([local.sms_log_prefix, "${local.sms_log_prefix}/Failure"]) : toset([])
   name              = each.value
   retention_in_days = var.log_retention_days
   tags              = var.tags
 }
 
 resource "aws_iam_role" "sms_delivery_status" {
-  name = "${var.name}-sns-sms-delivery-status"
-  tags = var.tags
+  count = var.enable_delivery_status_logs ? 1 : 0
+  name  = "${var.name}-sns-sms-delivery-status"
+  tags  = var.tags
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -54,8 +56,9 @@ resource "aws_iam_role" "sms_delivery_status" {
 }
 
 resource "aws_iam_role_policy" "sms_delivery_status" {
-  name = "cloudwatch-logs"
-  role = aws_iam_role.sms_delivery_status.id
+  count = var.enable_delivery_status_logs ? 1 : 0
+  name  = "cloudwatch-logs"
+  role  = aws_iam_role.sms_delivery_status[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -70,8 +73,8 @@ resource "aws_iam_role_policy" "sms_delivery_status" {
 resource "aws_sns_sms_preferences" "this" {
   monthly_spend_limit                   = var.monthly_spend_limit_usd
   default_sms_type                      = "Transactional"
-  delivery_status_iam_role_arn          = aws_iam_role.sms_delivery_status.arn
-  delivery_status_success_sampling_rate = tostring(var.delivery_status_success_sampling_pct)
+  delivery_status_iam_role_arn          = var.enable_delivery_status_logs ? aws_iam_role.sms_delivery_status[0].arn : null
+  delivery_status_success_sampling_rate = var.enable_delivery_status_logs ? tostring(var.delivery_status_success_sampling_pct) : null
 }
 
 # ── Alarms ────────────────────────────────────────────────────────────────────
@@ -104,7 +107,7 @@ resource "aws_cloudwatch_metric_alarm" "sms_spend" {
   for_each = toset([for p in var.spend_alarm_thresholds_pct : tostring(p)])
 
   alarm_name          = "${var.name}-sms-spend-${each.value}pct"
-  alarm_description   = "SNS SMS month-to-date spend reached ${each.value}% of the ${var.monthly_spend_limit_usd} USD monthly limit (SNS stops sending at 100%). Check for SMS pumping: the delivery-status logs show destinations."
+  alarm_description   = "SNS SMS month-to-date spend reached ${each.value}% of the ${var.monthly_spend_limit_usd} USD monthly limit (SNS stops sending at 100%). Check for SMS pumping (auth logs; the delivery-status logs show destinations when enabled)."
   namespace           = "AWS/SNS"
   metric_name         = "SMSMonthToDateSpentUSD"
   statistic           = "Maximum"
@@ -120,7 +123,7 @@ resource "aws_cloudwatch_metric_alarm" "sms_spend" {
 
 resource "aws_cloudwatch_metric_alarm" "sms_spend_spike" {
   alarm_name          = "${var.name}-sms-spend-spike"
-  alarm_description   = "SNS SMS spend grew by more than ${var.spend_spike_usd_per_hour} USD within an hour: likely SMS pumping. Check the delivery-status logs and auth's StartVerification traffic."
+  alarm_description   = "SNS SMS spend grew by more than ${var.spend_spike_usd_per_hour} USD within an hour: likely SMS pumping. Check auth's StartVerification traffic (and the delivery-status logs when enabled)."
   comparison_operator = "GreaterThanThreshold"
   threshold           = var.spend_spike_usd_per_hour
   evaluation_periods  = 1

@@ -39,6 +39,12 @@ variable "alert_email_ssm_parameter" {
   default     = "/core-platform/ops/alert-email"
 }
 
+variable "enable_delivery_status_logs" {
+  type        = bool
+  description = "Log SMS delivery statuses to CloudWatch Logs (an IAM role SNS assumes). Off by default: setting it on SNS needs iam:PassRole on that role for whoever applies, and the spend limit / Transactional default must never wait on it."
+  default     = false
+}
+
 variable "delivery_status_success_sampling_pct" {
   type        = number
   description = "Percentage of SUCCESSFUL SMS deliveries logged to CloudWatch Logs (failures are always logged)."
