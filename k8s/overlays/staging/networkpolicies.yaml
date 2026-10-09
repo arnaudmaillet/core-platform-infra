@@ -57,10 +57,10 @@ spec:
         operator: NotIn
         values:
           - account-server      # mesh callee  (auth, moderation)
-          - social-graph-server # mesh callee  (counter-worker, timeline, post, comment, search, geo-discovery)
-          - post-server         # mesh callee  (search, comment, moderation)
-          - profile-server      # mesh callee  (search, auth, moderation)
-          - moderation-server   # mesh callee  (media Screen)
+          - social-graph-server # mesh callee  (counter-worker, timeline, post, comment, search, geo-discovery, chat, account)
+          - post-server         # mesh callee  (search, comment, moderation, engagement, counter-server, account)
+          - profile-server      # mesh callee  (search, auth, moderation, account, notification)
+          - moderation-server   # mesh callee  (media Screen, account)
           - auth-server         # mesh callee  (realtime JWKS)
           - audit-server        # TIER-0 — no normal-flow mesh ingress
           - audit-worker        # worker — Kafka consumer, health only
@@ -169,7 +169,8 @@ spec:
     - from:
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [counter-worker, timeline-server, post-server, comment-server, search-server, geo-discovery-server] }
+              # chat: CheckInteraction(MESSAGE) for DMs; account: contact matching + GDPR export.
+              - { key: app, operator: In, values: [counter-worker, timeline-server, post-server, comment-server, search-server, geo-discovery-server, chat-server, account-server] }
       ports:
         - { protocol: TCP, port: 50053 }
 ---
@@ -187,7 +188,9 @@ spec:
         # moderation resolves whose post a client report targets (SubmitReport).
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [search-server, comment-server, moderation-server] }
+              # engagement + counter-server: hidden like counts (BatchGetLikeVisibility);
+              # account: GDPR export.
+              - { key: app, operator: In, values: [search-server, comment-server, moderation-server, engagement-server, counter-server, account-server] }
       ports:
         - { protocol: TCP, port: 50056 }
 ---
@@ -207,7 +210,9 @@ spec:
         # reported post/comment's author profile to its account (SubmitReport).
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [search-server, auth-server, moderation-server] }
+              # account: contact matching + GDPR export; notification: the sender's
+              # name in push alerts.
+              - { key: app, operator: In, values: [search-server, auth-server, moderation-server, account-server, notification-server] }
       ports:
         - { protocol: TCP, port: 50052 }
 ---
@@ -222,9 +227,11 @@ spec:
   policyTypes: [Ingress]
   ingress:
     - from:
+        # media: the fail-closed Screen gate; account: a supervised teen's
+        # reports for their supervisor (ListReportsByReporter).
         - podSelector:
-            matchLabels:
-              app: media-server
+            matchExpressions:
+              - { key: app, operator: In, values: [media-server, account-server] }
       ports:
         - { protocol: TCP, port: 50061 }
 ---
