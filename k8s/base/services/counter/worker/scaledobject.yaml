@@ -32,9 +32,12 @@ spec:
       metadata:
         # Patched per-env. e.g. dev: redpanda.default.svc:9093 / prod: MSK bootstrap.
         bootstrapServers: KAFKA_BOOTSTRAP_PLACEHOLDER
-        consumerGroup: counter-worker
-        # Omitting `topic` monitors lag across ALL topics the group subscribes to
-        # (view/impression/click.v1.events). Scale when avg lag/pod exceeds:
+        # The backend runs one consumer group PER TOPIC (view, impression, click,
+        # wallet.v1.events, social-graph.follows); this base trigger watches the
+        # main one. The staging/prod overlays restate one trigger per topic with
+        # its real group (patch-counter-worker-scaler.yaml). Scale when lag exceeds:
+        consumerGroup: counter-view-aggregator
+        topic: view.v1.events
         lagThreshold: "5000"
         # `earliest` so a cold/reset consumer group counts the FULL unconsumed
         # backlog as lag and KEDA scales up to drain it — the right policy for an

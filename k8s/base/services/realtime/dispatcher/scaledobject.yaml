@@ -21,7 +21,10 @@ spec:
     - type: kafka
       metadata:
         bootstrapServers: KAFKA_BOOTSTRAP_PLACEHOLDER
-        consumerGroup: realtime-dispatcher
-        # All subscribed fan-out topics (notification + public-broadcast streams).
+        # One consumer group PER TOPIC (realtime-notif-fanout, -post-fanout,
+        # -counter-fanout); this base trigger watches the notification stream. The
+        # staging/prod overlays restate one trigger per topic with its real group.
+        consumerGroup: realtime-notif-fanout
+        topic: notification.v1.events
         lagThreshold: "2000"
         offsetResetPolicy: latest
