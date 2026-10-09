@@ -56,7 +56,7 @@ spec:
       - key: app
         operator: NotIn
         values:
-          - account-server      # mesh callee  (auth, moderation)
+          - account-server      # mesh callee  (auth, moderation, geo-discovery)
           - social-graph-server # mesh callee  (counter-worker, timeline, post, comment, search, geo-discovery, chat, account)
           - post-server         # mesh callee  (search, comment, moderation, engagement, counter-server, account)
           - profile-server      # mesh callee  (search, auth, moderation, account, notification)
@@ -155,7 +155,8 @@ spec:
     - from:
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [auth-server, moderation-server] }
+              # geo-discovery: a member's home country for country unlocks (#42).
+              - { key: app, operator: In, values: [auth-server, moderation-server, geo-discovery-server] }
       ports:
         - { protocol: TCP, port: 50059 }
 ---

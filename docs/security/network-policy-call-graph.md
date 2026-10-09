@@ -88,7 +88,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 
 | Callee | Allowed in-mesh callers | Port |
 |---|---|---|
-| `account` | `auth`, `moderation` | 50059 |
+| `account` | `auth`, `moderation`, `geo-discovery` (country unlocks: home country) | 50059 |
 | `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account`, `wallet` | 50053 |
 | `post` | `search`, `comment`, `moderation`, `engagement`, `counter-server`, `account`, `wallet` | 50056 |
 | `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim), `moderation` (report target → account), `account`, `notification` | 50052 |
@@ -215,7 +215,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 
 | Service | Datastores / object store (egress) | gRPC callees | Kafka |
 |---|---|---|---|
-| account | CNPG `account` | profile:50052, social-graph:50053, moderation:50061; GDPR export: post:50056, comment:50057, engagement:50058, chat:50051, media:50063, search:50062 | producer |
+| account | CNPG `account` | profile:50052, social-graph:50053, moderation:50061; GDPR export: post:50056, comment:50057, engagement:50058, chat:50051, media:50063, search:50062, wallet:50072 | producer |
 | auth | CNPG `auth`, Redis, **internet** (see below) | account:50059, profile:50052 | producer |
 | profile | CNPG, Redis, Scylla | — | both |
 | social-graph | CNPG, Redis, Scylla | — | both |
@@ -223,7 +223,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | comment | CNPG, Scylla | post:50056, social-graph:50053 | both |
 | engagement | CNPG, Redis, Scylla | post:50056 | both |
 | counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053, post:50056 (server) | both |
-| geo-discovery | CNPG, Redis, Scylla | social-graph:50053 | consumer |
+| geo-discovery | CNPG, Redis, Scylla | social-graph:50053, wallet:50072, account:50059 | consumer |
 | notification | CNPG, Redis, Scylla, **internet** (APNs, see below) | profile:50052 | consumer |
 | timeline | CNPG, Redis, Scylla | social-graph:50053, geo-discovery:50054 | consumer |
 | chat | CNPG, Redis, Scylla | social-graph:50053 | producer |
