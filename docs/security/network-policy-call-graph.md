@@ -71,16 +71,23 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `comment` | `PostServiceClient` + `SocialGraphServiceClient` | `post:50056`, `social-graph:50053` | read gate (`GetPost` + `CheckAccess`) on non-mesh reads — **fail closed** |
 | `media` | `ModerationServiceClient` | `moderation:50061` | **fail-closed Screen gate** |
 | `realtime` | `JwksClient` | `auth:50060` | fetch JWKS to verify edge tokens |
+| `chat` | `SocialGraphServiceClient` | `social-graph:50053` | `CheckInteraction(MESSAGE)` for direct messages and group invitations — **fail closed** |
+| `engagement` | `PostServiceClient` | `post:50056` | hidden like counts (`BatchGetLikeVisibility`) — **fail closed** (likes withheld) |
+| `counter-server` | `PostServiceClient` | `post:50056` | hidden like counts on `BatchGetCounters` — **fail closed** |
+| `notification` | `ProfileServiceClient` | `profile:50052` | the sender's name in push alerts |
+| `account` | `ProfileServiceClient` + `SocialGraphServiceClient` | `profile:50052`, `social-graph:50053` | `FindProfilesByContacts` (address-book matching); GDPR export |
+| `account` | post, comment, engagement, chat, media, search clients | `post:50056`, `comment:50057`, `engagement:50058`, `chat:50051`, `media:50063`, `search:50062` | GDPR data export pass (off until `ACCOUNT_EXPORT_BUCKET` is set) |
+| `account` | `ModerationServiceClient` | `moderation:50061` | a supervised teen's reports for their supervisor (`ListReportsByReporter`) |
 
 ### Inbound matrix (who a policy must allow)
 
 | Callee | Allowed in-mesh callers | Port |
 |---|---|---|
 | `account` | `auth`, `moderation` | 50059 |
-| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery` | 50053 |
-| `post` | `search`, `comment`, `moderation` | 50056 |
-| `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim), `moderation` (report target → account) | 50052 |
-| `moderation` | `media` | 50061 |
+| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account` | 50053 |
+| `post` | `search`, `comment`, `moderation`, `engagement`, `counter-server`, `account` | 50056 |
+| `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim), `moderation` (report target → account), `account`, `notification` | 50052 |
+| `moderation` | `media`, `account` | 50061 |
 | `auth` | `realtime` | 50060 |
 | `auth` (JWKS, HTTP) | **every server pod** — all edge-token verifiers | 8081 |
 
@@ -201,18 +208,18 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 
 | Service | Datastores / object store (egress) | gRPC callees | Kafka |
 |---|---|---|---|
-| account | CNPG `account` | — | producer |
+| account | CNPG `account` | profile:50052, social-graph:50053, moderation:50061; GDPR export: post:50056, comment:50057, engagement:50058, chat:50051, media:50063, search:50062 | producer |
 | auth | CNPG `auth`, Redis, **internet** (see below) | account:50059, profile:50052 | producer |
 | profile | CNPG, Redis, Scylla | — | both |
 | social-graph | CNPG, Redis, Scylla | — | both |
 | post | CNPG, Scylla | social-graph:50053 | both |
 | comment | CNPG, Scylla | post:50056, social-graph:50053 | both |
-| engagement | CNPG, Redis, Scylla | — | both |
-| counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053 | both |
+| engagement | CNPG, Redis, Scylla | post:50056 | both |
+| counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053, post:50056 (server) | both |
 | geo-discovery | CNPG, Redis, Scylla | social-graph:50053 | consumer |
-| notification | CNPG, Redis, Scylla | — | consumer |
+| notification | CNPG, Redis, Scylla, **internet** (APNs, see below) | profile:50052 | consumer |
 | timeline | CNPG, Redis, Scylla | social-graph:50053, geo-discovery:50054 | consumer |
-| chat | CNPG, Redis, Scylla | — | producer |
+| chat | CNPG, Redis, Scylla | social-graph:50053 | producer |
 | moderation | CNPG, Redis, Scylla | account:50059, post:50056, comment:50057, profile:50052 | both |
 | media (server) | CNPG, Redis, **S3** (asset + object-store) | moderation:50061 | both |
 | media (worker) | CNPG, Redis, **S3** (renditions) | — | consumer |
@@ -228,6 +235,11 @@ lockdown must keep these open from `auth-server`, or sign-up and sign-in break:
   A VPC interface endpoint (`com.amazonaws.us-east-1.email-smtp`) keeps it private;
 - one-time SMS codes (SNS), **:443**: `sns.us-east-1.amazonaws.com`. A VPC
   interface endpoint for SNS keeps it private.
+
+**notification's external egress** (iOS push, core-platform-infra#39): the lockdown
+must keep **:443** open from `notification-server` to `api.push.apple.com`, and to
+`api.sandbox.push.apple.com` for development builds. Apple serves APNs from
+`17.0.0.0/8`, which an `ipBlock` can name.
 
 **Managed-AWS egress targets** (no pod IP — use ipBlock of the **private-data subnet
 CIDRs**): MSK :9096, ElastiCache :6379, OpenSearch :443. **S3** → via the S3 gateway
