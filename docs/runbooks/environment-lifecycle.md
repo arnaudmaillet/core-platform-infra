@@ -107,6 +107,18 @@ kubectl apply -k k8s/base/infra/scylla-cluster
   fleet syncs: the client-edge Ingress carries `wafv2-acl-arn: ${WAF_EDGE_ACL_ARN}`.
   A literal `${WAF_EDGE_ACL_ARN}` makes the LB controller fail to reconcile the
   Ingress, so the **whole client-edge ALB** breaks, not just the WAF.
+- **wallet-server (new service, core-platform-infra#41):**
+  - `global/artifacts/ecr` must have created `core-platform-wallet-server`, and the
+    backend must have added `wallet-server` to `FLEET_BINS` with a pin landed since.
+    Until then the two wallet pods sit in `ImagePullBackOff` and the fleet App shows
+    Degraded; the rest of the fleet is unaffected.
+  - `security/irsa-roles` applies before the fleet sync: the CNPG backup trust is an
+    exact-match list, and without `default:<env>-wallet-postgres` WAL archiving to
+    S3 fails.
+- **Prod promotion:** run `prod-promote` before any develop → main. The prod overlay
+  names topics, consumer groups and services (wallet.v1.events,
+  counter-stake-aggregator, wallet-server) that only images at or after the
+  staging pin have.
 - **SES / SNS sandboxes (one-time, per account, manual).** Until production access
   is granted, SES only emails verified addresses and SNS only texts verified
   numbers, which is enough for staging tests. Before real users sign up, request

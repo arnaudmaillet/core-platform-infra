@@ -88,8 +88,8 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | Callee | Allowed in-mesh callers | Port |
 |---|---|---|
 | `account` | `auth`, `moderation` | 50059 |
-| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account` | 50053 |
-| `post` | `search`, `comment`, `moderation`, `engagement`, `counter-server`, `account` | 50056 |
+| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account`, `wallet` | 50053 |
+| `post` | `search`, `comment`, `moderation`, `engagement`, `counter-server`, `account`, `wallet` | 50056 |
 | `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim), `moderation` (report target → account), `account`, `notification` | 50052 |
 | `moderation` | `media`, `account` | 50061 |
 | `auth` | `realtime` | 50060 |
