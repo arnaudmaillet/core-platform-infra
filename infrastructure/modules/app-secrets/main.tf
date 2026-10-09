@@ -390,6 +390,16 @@ resource "aws_secretsmanager_secret_version" "auth_sns" {
 # secret. It is two resource variants because prevent_destroy can't take a
 # variable; staging keeps the unprotected one so its disposable teardown works
 # (its accounts are destroyed with it).
+#
+# !! FLIPPING false -> true ON AN ENV WHOSE KEY EXISTS: the variants are different
+# addresses, so a plain apply destroys the unprotected key (no prevent_destroy on
+# it) and generates a new one = every 2FA account locked out. Move the state
+# FIRST, in that env's data/app-secrets, then flip the variable and apply (the
+# plan must show no change to the key or the secret):
+#   terragrunt state mv 'random_bytes.auth_mfa_seed[0]' 'random_bytes.auth_mfa_seed_protected[0]'
+#   terragrunt state mv 'aws_secretsmanager_secret.auth_mfa[0]' 'aws_secretsmanager_secret.auth_mfa_protected[0]'
+# (true -> false is blocked by prevent_destroy: plan fails, nothing is lost; move
+# the state the other way to do it on purpose.)
 resource "random_bytes" "auth_mfa_seed" {
   count  = var.protect_mfa_seed_key ? 0 : 1
   length = 32
