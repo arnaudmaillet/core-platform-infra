@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./secrets-eso.md
-  source_sha256: 43517d4802552b08d2f8f3daf529065acb8d299631697bb52bf0914cce9a8d2a
-  translated_at: 2026-10-05
+  source_sha256: 015163e1c722460de98538611029dbf1e31ae09a378f99e5635908b7b1f95f90
+  translated_at: 2026-10-09
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`secrets-eso.md`](./secrets-eso.md) fait foi.
@@ -48,6 +48,8 @@ l'intérêt de la topologie.
 │    core-platform-staging-auth-secrets         {signing pems, kc secret}   │
 │    core-platform-staging-auth-smtp            {username, password}        │
 │    core-platform-staging-auth-sns             {access key id, secret}     │
+│    core-platform-staging-auth-mfa             {seed key, key id}          │
+│    core-platform-staging-account-exports      {access key id, secret}     │
 └───────────────┬───────────────────────────────────────────────────────────┘
                 │  ESO IRSA role (external_secrets) assumed by the
                 │  external-secrets ServiceAccount (OIDC/JWT)
@@ -61,7 +63,9 @@ l'intérêt de la topologie.
 │      ├─ ExternalSecret audit-crypto     ──► Secret audit-crypto   (audit)  │
 │      ├─ ExternalSecret auth-secrets     ──► Secret auth-secrets   (auth)   │
 │      ├─ ExternalSecret auth-smtp        ──► Secret auth-smtp      (auth)   │
-│      └─ ExternalSecret auth-sns         ──► Secret auth-sns       (auth)   │
+│      ├─ ExternalSecret auth-sns         ──► Secret auth-sns       (auth)   │
+│      ├─ ExternalSecret auth-mfa         ──► Secret auth-mfa       (auth)   │
+│      └─ ExternalSecret account-exports  ──► Secret account-exports (account)│
 └───────────────┬───────────────────────────────────────────────────────────┘
                 │  envFrom (deployment patch)
                 ▼
@@ -104,7 +108,7 @@ accorde la lecture sur `core-platform-staging-*` (et le secret `AmazonMSK_*`).
 | Classe | Comment elle arrive dans Secrets Manager | Exemples |
 |---|---|---|
 | **Machine-généré** | Écrit par les **modules Terraform de datastore** au moment de l'apply. | MSK SCRAM (`AmazonMSK_…_app`), Redis AUTH (`…-redis-auth`), OpenSearch master (`…-opensearch-master`). |
-| **Seedé** | Provisionné par l'unité Terragrunt **`data/app-secrets`** (auparavant créé hors-bande à la main). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`, `…-auth-smtp`, `…-auth-sns`. |
+| **Seedé** | Provisionné par l'unité Terragrunt **`data/app-secrets`** (auparavant créé hors-bande à la main). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`, `…-auth-smtp`, `…-auth-sns`, `…-auth-mfa`, `…-account-exports`. |
 
 Les deux classes finissent en entrées SM sous le préfixe `core-platform-staging-*`
 (ou `AmazonMSK_core-platform-staging_*`), et ESO les lit de manière uniforme. La
@@ -115,7 +119,7 @@ seedées sont le travail de l'unité `data/app-secrets`. Voir la
 
 ---
 
-## 4. Les sept ExternalSecrets (ce que chacun alimente)
+## 4. Les neuf ExternalSecrets (ce que chacun alimente)
 
 | ExternalSecret → k8s Secret | Consommé par | Clés (env var ← propriété SM) |
 |---|---|---|
@@ -126,6 +130,8 @@ seedées sont le travail de l'unité `data/app-secrets`. Voir la
 | **`auth-secrets`** | `auth` seulement | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM`, `AUTH_KEYCLOAK_CLIENT_SECRET` (← `keycloak_client_secret`), `AUTH_KEYCLOAK_ADMIN_CLIENT_SECRET` (← `keycloak_admin_client_secret`) ← auth-secrets |
 | **`auth-smtp`** | `auth` seulement, monté en **`optional`** (un secret SMTP absent ne doit pas empêcher auth de démarrer) | `AUTH_SMTP_USERNAME/PASSWORD` ← auth-smtp (id de clé d'un utilisateur IAM + mot de passe SMTP SES dérivé, autorisé à envoyer uniquement en tant que `no-reply@core-platform.click`) |
 | **`auth-sns`** | `auth` seulement, monté en **`optional`** | `AUTH_SNS_ACCESS_KEY_ID/SECRET_ACCESS_KEY` ← auth-sns (un utilisateur IAM autorisé à `sns:Publish` vers des numéros de téléphone uniquement ; freins SMS au niveau du compte dans `global/messaging/sms`) |
+| **`auth-mfa`** | `auth` seulement, monté en **`optional`** | `AUTH_MFA_SEED_KEY` (32 octets, base64) / `AUTH_MFA_SEED_KEY_ID` ← auth-mfa. Chiffre chaque graine TOTP : **ne jamais la supprimer ni la régénérer dès qu'un compte s'est inscrit** (prod : `prevent_destroy`) |
+| **`account-exports`** | `account` seulement, monté en **`optional`** | `ACCOUNT_EXPORT_S3_ACCESS_KEY/SECRET_KEY` ← account-exports (un utilisateur IAM limité au préfixe `exports/` du bucket d'export RGPD) |
 
 > **Hors de l'overlay de la flotte :** l'app plateforme `keycloak` (ns `keycloak`)
 > porte son propre ExternalSecret **`keycloak-secrets`** : `KC_BOOTSTRAP_ADMIN_PASSWORD`
@@ -173,7 +179,7 @@ sont le report externe documenté ; le câblage ici est le **chemin v1 ENV-KEK**
 `auth-smtp` (SMTP SES) et `auth-sns` (SMS SNS) sont aussi des clés d'accès
 d'utilisateurs IAM.
 
-**Faire tourner une clé statique** (media, scylla, audit, auth-smtp, auth-sns ; les
+**Faire tourner une clé statique** (media, scylla, audit, auth-smtp, auth-sns, account-exports ; les
 clés sont aussi dans le state Terraform) :
 1. `terragrunt apply -replace=aws_iam_access_key.<name>` dans `data/app-secrets`
    (p. ex. `auth_smtp`) : nouvelle clé, nouvelle valeur SM, ancienne clé supprimée.

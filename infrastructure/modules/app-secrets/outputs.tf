@@ -25,6 +25,16 @@ output "auth_sns_secret_arn" {
   value       = aws_secretsmanager_secret.auth_sns.arn
 }
 
+output "auth_mfa_secret_id" {
+  description = "Id (ARN) of the auth MFA seed key secret."
+  value       = local.auth_mfa_secret_id
+}
+
+output "account_exports_secret_arn" {
+  description = "ARN of the account GDPR-export static-key secret."
+  value       = aws_secretsmanager_secret.account_exports.arn
+}
+
 output "auth_secrets_secret_arn" {
   description = "ARN of the auth signing/Keycloak secret."
   value       = aws_secretsmanager_secret.auth_secrets.arn

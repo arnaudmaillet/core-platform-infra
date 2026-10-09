@@ -51,6 +51,12 @@ variable "force_destroy" {
   default     = false
 }
 
+variable "expiration_days" {
+  type        = number
+  description = "Expire every object this many days after creation (plus noncurrent versions after 1 day, stale multipart uploads after 1 day). 0 = no lifecycle rule."
+  default     = 0
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to the bucket."

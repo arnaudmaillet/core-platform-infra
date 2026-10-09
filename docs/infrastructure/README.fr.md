@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./README.md
-  source_sha256: 41e057a5c4afd0ff9d1585916b87069e4bae8479855cbb2647870ca76031d12a
-  translated_at: 2026-10-05
+  source_sha256: c5bf26af0cd245eddc2c4d6dae65f8038d42c9a3ed50acd44d5b55bf1417f1b5
+  translated_at: 2026-10-09
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`README.md`](./README.md) fait foi.
@@ -163,6 +163,8 @@ Terragrunt résout le DAG via `run-all apply` ; l'ordre explicite (chacun consom
   - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret, keycloak_admin_client_secret}`.
   - `…-auth-smtp` `{username, password}` — identifiants SMTP SES des codes à usage unique par email (désormais seedés par `data/app-secrets`).
   - `…-auth-sns` `{access_key_id, secret_access_key}` — clés SNS des codes à usage unique par SMS, numéros de téléphone uniquement (désormais seedés par `data/app-secrets`).
+  - `…-auth-mfa` `{seed_key, seed_key_id}` — la clé qui chiffre les graines TOTP ; ne jamais la régénérer une fois utilisée (désormais seedée par `data/app-secrets`).
+  - `…-account-exports` `{access_key_id, secret_access_key}` — clés du bucket d'export RGPD, préfixe `exports/` uniquement (désormais seedées par `data/app-secrets`).
 
 ### 3.3 Étapes manuelles et substituts (placeholders)
 

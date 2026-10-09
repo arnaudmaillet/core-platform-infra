@@ -221,6 +221,10 @@ patches:
       kind: Deployment
   # DATABASE_URL from each CNPG cluster's -app secret (init container + runtime).
   - path: patch-account-db.yaml
+  - path: patch-account-exports.yaml
+    target:
+      kind: Deployment
+      name: account-server
   - path: patch-counter-server-db.yaml
   - path: patch-counter-worker-db.yaml
   - path: patch-audit-server-db.yaml
