@@ -7,7 +7,8 @@ output "alerts_topic_arn" {
 
 output "alert_email_subscribed" {
   description = "Whether an email subscription was created from the SSM parameter (it must then be confirmed from the inbox)."
-  value       = local.alert_email != ""
+  # The SSM parameter values are sensitive; whether one was found is not.
+  value = nonsensitive(local.alert_email != "")
 }
 
 output "allowed_countries" {
