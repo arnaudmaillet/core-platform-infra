@@ -14,6 +14,7 @@
 #   * <name>-auth-sns     {access_key_id, secret_access_key}       (SNS SMS, one-time SMS codes)
 #   * <name>-auth-mfa     {seed_key, seed_key_id}                  (TOTP seed encryption key)
 #   * <name>-account-exports {access_key_id, secret_access_key}    (GDPR export bucket)
+#   * <name>-notification-apns {key_id, key_p8}                    (APNs, OWNER-filled; placeholder)
 #
 # STAGING v1 PATH: static IAM keys (rusty-s3 cannot use IRSA web-identity) and the
 # env-KEK / signing key are GENERATED HERE and live in Terraform state. Prod's
@@ -486,4 +487,28 @@ resource "aws_secretsmanager_secret_version" "account_exports" {
     access_key_id     = aws_iam_access_key.account_exports.id
     secret_access_key = aws_iam_access_key.account_exports.secret
   })
+}
+
+# ── notification: APNs auth key (iOS push, core-platform-infra#39) ────────────
+# The key (AuthKey_<KEYID>.p8, Apple Developer → Keys) is the OWNER's: this only
+# creates the secret with EMPTY values, which keep push off ("push off" log, the
+# feed and badge work as before). The owner writes the real value once:
+#   aws secretsmanager put-secret-value --secret-id <name>-notification-apns \
+#     --secret-string "$(jq -n --arg id <KEYID> --rawfile p8 AuthKey_<KEYID>.p8 '{key_id:$id,key_p8:$p8}')"
+# ignore_changes keeps Terraform from ever writing the placeholder back over it.
+# NB: a staging teardown deletes the secret (recovery window 0); re-put the key
+# after a rebuild.
+resource "aws_secretsmanager_secret" "notification_apns" {
+  name                    = "${var.name}-notification-apns"
+  recovery_window_in_days = var.secret_recovery_window_days
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "notification_apns" {
+  secret_id     = aws_secretsmanager_secret.notification_apns.id
+  secret_string = jsonencode({ key_id = "", key_p8 = "" })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }

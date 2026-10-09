@@ -202,6 +202,11 @@ patches:
     target:
       kind: Deployment
       labelSelector: "app in (comment-server,chat-server)"
+  # APNs key (file + key id) into notification-server, optional (#39).
+  - path: patch-notification-apns.yaml
+    target:
+      kind: Deployment
+      name: notification-server
   - path: patch-backend-creds.yaml
     target:
       kind: Deployment
