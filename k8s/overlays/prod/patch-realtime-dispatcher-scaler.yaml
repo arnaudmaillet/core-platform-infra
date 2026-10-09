@@ -11,11 +11,26 @@ spec:
   # __amazon_msk_canary: the workers flapped min<->max on phantom lag before
   # any traffic existed (found live pre-soak). Topic list = the event-topology
   # registry's consumer edges for this worker; keep them in lockstep.
+  # consumerGroup = the group that topic's consumer actually commits under: the
+  # backend runs ONE GROUP PER TOPIC (crates/services/realtime/src/service.rs). A
+  # group nobody commits to reads, with `earliest`, as the whole topic = phantom
+  # lag that pins the worker at max replicas.
   triggers:
     - type: kafka
       metadata:
         bootstrapServers: ${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}
-        consumerGroup: realtime-dispatcher
+        consumerGroup: realtime-notif-fanout
+        topic: notification.v1.events
+        lagThreshold: "2000"
+        offsetResetPolicy: earliest
+        sasl: scram_sha512
+        tls: enable
+      authenticationRef:
+        name: keda-msk-auth
+    - type: kafka
+      metadata:
+        bootstrapServers: ${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}
+        consumerGroup: realtime-post-fanout
         topic: post.v1.events
         lagThreshold: "2000"
         offsetResetPolicy: earliest
@@ -26,7 +41,7 @@ spec:
     - type: kafka
       metadata:
         bootstrapServers: ${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}
-        consumerGroup: realtime-dispatcher
+        consumerGroup: realtime-counter-fanout
         topic: counter.v1.popularity
         lagThreshold: "2000"
         offsetResetPolicy: earliest
