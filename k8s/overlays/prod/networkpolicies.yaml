@@ -62,6 +62,7 @@ spec:
           - profile-server      # mesh callee  (search, auth, moderation, account, notification)
           - moderation-server   # mesh callee  (media Screen, account)
           - wallet-server       # mesh callee  (geo-discovery, account) — TIER-0 ledger
+          - media-server        # mesh callee  (account, profile) — mints private-document links
           - auth-server         # mesh callee  (realtime JWKS)
           - audit-server        # TIER-0 — no normal-flow mesh ingress
           - audit-worker        # worker — Kafka consumer, health only
@@ -258,6 +259,28 @@ spec:
               - { key: app, operator: In, values: [geo-discovery-server, account-server] }
       ports:
         - { protocol: TCP, port: 50072 }
+---
+# media-server: GetPrivateDocumentUrl (mesh-only) signs a link to anyone's ID
+# document, and NetworkPolicy is L4 (no per-RPC scoping), so media's mesh port
+# takes ONLY the callers that need media (#37): account (GDPR export,
+# ListAssetsByOwner) and profile (verification documents, GetAsset). A staff
+# caller gate in media is the proper fix (tracked backend-side).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-media-from-mesh
+spec:
+  podSelector:
+    matchLabels:
+      app: media-server
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [account-server, profile-server] }
+      ports:
+        - { protocol: TCP, port: 50063 }
 ---
 # realtime-gateway fetches JWKS from auth to verify edge tokens. auth serves both
 # gRPC and JWKS on 50060 (its only port).

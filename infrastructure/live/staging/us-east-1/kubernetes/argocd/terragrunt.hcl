@@ -63,6 +63,14 @@ dependency "waf_edge" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
+# Media CDN distribution id: MEDIA_CLOUDFRONT_DISTRIBUTION_ID for media's takedown
+# purges (the invalidation right is granted by that unit, before this value).
+dependency "media_cdn" {
+  config_path                             = "../../networking/media-cdn"
+  mock_outputs                            = { distribution_id = "EMOCKDISTRIBUTION" }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
 # Ordering-only: the workload ExternalSecrets (synced by ArgoCD) pull the app
 # secrets this unit seeds, so it must apply before ArgoCD brings up the fleet.
 # No outputs consumed here.
@@ -114,6 +122,7 @@ inputs = {
   # --- Security & Certificates ---
   ssl_certificate_arn = dependency.acm_cert.outputs.certificate_arn
   waf_edge_acl_arn    = dependency.waf_edge.outputs.web_acl_arn
+  media_cloudfront_distribution_id = dependency.media_cdn.outputs.distribution_id
 
   # --- CMP envsubst values (data-store endpoints for the workload overlay) ---
   msk_bootstrap_brokers = dependency.msk.outputs.bootstrap_brokers_sasl_scram
