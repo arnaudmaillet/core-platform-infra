@@ -1,0 +1,11 @@
+# k8s/overlays/prod/patch-account-exports.yaml
+#
+# GDPR export bucket keys (account-exports ExternalSecret) into account-server.
+# optional: without them the export pass stays off and requests stay pending;
+# nothing else in account depends on them.
+- op: add
+  path: /spec/template/spec/containers/0/envFrom/-
+  value:
+    secretRef:
+      name: account-exports
+      optional: true

@@ -46,6 +46,12 @@ dependency "scylla_backups" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
+dependency "gdpr_exports" {
+  config_path                             = "../gdpr-exports"
+  mock_outputs                            = { bucket_arn = "arn:aws:s3:::mock-gdpr-exports" }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
 locals {
   env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
 }
@@ -56,6 +62,10 @@ inputs = {
   audit_worm_bucket_arn     = dependency.audit_worm.outputs.bucket_arn
   audit_kms_key_arn         = dependency.audit_kms.outputs.key_arn
   scylla_backups_bucket_arn = dependency.scylla_backups.outputs.bucket_arn
+  gdpr_exports_bucket_arn   = dependency.gdpr_exports.outputs.bucket_arn
+
+  # Losing the MFA seed key locks every 2FA account out of sign-in.
+  protect_mfa_seed_key = true
 
   tags = {
     Environment = local.env_vars.locals.env

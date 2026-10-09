@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./terragrunt-units.md
-  source_sha256: 5a1f36bb6833f1098ff22ecdb5a59bc3cb5e2d4ef325b781acfadd0526a6a67e
-  translated_at: 2026-10-05
+  source_sha256: 358d84329b6d02370b7035fbe4da002ede83012f6021e838b50643915c81ccfa
+  translated_at: 2026-10-09
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`terragrunt-units.md`](./terragrunt-units.md) fait foi.
@@ -116,7 +116,8 @@ Légende : **Module** = module sous-jacent · **Depends on** = unités consommé
 | **`data/audit-kms`** | `kms-key` | — | **KEK** d'audit (enveloppe les DEK par-sujet ; crypto-shred RGPD). → ARN de clé. Le seul principal est le rôle IRSA d'audit. |
 | **`data/audit-worm`** | `s3-bucket` | `audit-kms` | Bucket de preuves de conformité : **Object-Lock COMPLIANCE** + SSE-KMS sous la KEK d'audit. → ARN du bucket. |
 | **`data/cnpg-backups`** | `s3-bucket` | — | Cible de backup pour les clusters Postgres CNPG in-cluster. → ARN du bucket. |
-| **`data/app-secrets`** | `app-secrets` | `media-bucket`, `audit-worm`, `audit-kms` | Seede/organise les entrées Secrets Manager que les ExternalSecrets de la flotte tirent. Ordonnancement seul pour l'unité argocd (`skip_outputs`). |
+| **`data/gdpr-exports`** | `s3-bucket` | — | Bucket privé des exports RGPD : sans versioning, objets expirés après 8 jours (`expiration_days`). → ARN du bucket (borne l'utilisateur `account-exports` dans `app-secrets`). |
+| **`data/app-secrets`** | `app-secrets` | `media-bucket`, `audit-worm`, `audit-kms`, `gdpr-exports` | Seede/organise les entrées Secrets Manager que les ExternalSecrets de la flotte tirent. Ordonnancement seul pour l'unité argocd (`skip_outputs`). |
 
 ### Sécurité & livraison
 
@@ -215,7 +216,7 @@ le [runbook de reconstruction du staging jetable](../runbooks/staging-disposable
 | `acm-cert` | `networking/acm-cert` |
 | `eks` | `eks` (staging, dev, prod) |
 | `msk` / `elasticache` / `opensearch` | `data/msk` · `data/elasticache` · `data/opensearch` |
-| `s3-bucket` (générique) | `data/media-bucket` (Lock off) · `data/audit-worm` (Lock : GOVERNANCE staging / COMPLIANCE prod) · `data/cnpg-backups` · `data/scylla-backups` |
+| `s3-bucket` (générique) | `data/media-bucket` (Lock off) · `data/audit-worm` (Lock : GOVERNANCE staging / COMPLIANCE prod) · `data/cnpg-backups` · `data/scylla-backups` · `data/gdpr-exports` (expiry 8 days) |
 | `kms-key` | `data/audit-kms` |
 | `app-secrets` | `data/app-secrets` |
 | `security/irsa-roles` | `security/irsa-roles` |

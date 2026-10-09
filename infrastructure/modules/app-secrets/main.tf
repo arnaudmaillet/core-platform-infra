@@ -12,6 +12,8 @@
 #                          keycloak_admin_client_secret}
 #   * <name>-auth-smtp    {username, password}                     (SES SMTP, one-time email codes)
 #   * <name>-auth-sns     {access_key_id, secret_access_key}       (SNS SMS, one-time SMS codes)
+#   * <name>-auth-mfa     {seed_key, seed_key_id}                  (TOTP seed encryption key)
+#   * <name>-account-exports {access_key_id, secret_access_key}    (GDPR export bucket)
 #
 # STAGING v1 PATH: static IAM keys (rusty-s3 cannot use IRSA web-identity) and the
 # env-KEK / signing key are GENERATED HERE and live in Terraform state. Prod's
@@ -374,5 +376,104 @@ resource "aws_secretsmanager_secret_version" "auth_sns" {
   secret_string = jsonencode({
     access_key_id     = aws_iam_access_key.auth_sns.id
     secret_access_key = aws_iam_access_key.auth_sns.secret
+  })
+}
+
+# ── auth: MFA seed key (two-step sign-in, core-platform-infra#27) ─────────────
+# auth encrypts each holder's TOTP seed (AES-256-GCM) with this key before
+# account stores it. NEVER regenerate or delete it once anyone has enrolled:
+# every account with 2FA on would be locked out of sign-in (TIER-0, fail-closed).
+# Rotation = a NEW key with a new id, the old one kept in
+# AUTH_MFA_SEED_KEYS_PREVIOUS (backend side).
+#
+# `protect_mfa_seed_key` (prod) puts prevent_destroy on the key material and the
+# secret. It is two resource variants because prevent_destroy can't take a
+# variable; staging keeps the unprotected one so its disposable teardown works
+# (its accounts are destroyed with it).
+resource "random_bytes" "auth_mfa_seed" {
+  count  = var.protect_mfa_seed_key ? 0 : 1
+  length = 32
+}
+
+resource "random_bytes" "auth_mfa_seed_protected" {
+  count  = var.protect_mfa_seed_key ? 1 : 0
+  length = 32
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_secretsmanager_secret" "auth_mfa" {
+  count                   = var.protect_mfa_seed_key ? 0 : 1
+  name                    = "${var.name}-auth-mfa"
+  recovery_window_in_days = var.secret_recovery_window_days
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret" "auth_mfa_protected" {
+  count                   = var.protect_mfa_seed_key ? 1 : 0
+  name                    = "${var.name}-auth-mfa"
+  recovery_window_in_days = var.secret_recovery_window_days
+  tags                    = var.tags
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+locals {
+  auth_mfa_secret_id = one(concat(aws_secretsmanager_secret.auth_mfa[*].id, aws_secretsmanager_secret.auth_mfa_protected[*].id))
+  auth_mfa_seed_b64  = one(concat(random_bytes.auth_mfa_seed[*].base64, random_bytes.auth_mfa_seed_protected[*].base64))
+}
+
+resource "aws_secretsmanager_secret_version" "auth_mfa" {
+  secret_id = local.auth_mfa_secret_id
+  secret_string = jsonencode({
+    seed_key    = local.auth_mfa_seed_b64 # 32 bytes, standard base64 (44 chars)
+    seed_key_id = var.mfa_seed_key_id
+  })
+}
+
+# ── account: GDPR export bucket keys (core-platform-infra#28) ─────────────────
+# account-server's export pass writes the archive with rusty-s3 and signs a
+# 7-day download link: SigV4 presigning that long needs non-STS credentials, so
+# static keys, like media. Scoped to the bucket's exports/ prefix.
+# Rotation: same as auth_smtp above (-replace=aws_iam_access_key.account_exports);
+# links already sent stop working with the old key.
+resource "aws_iam_user" "account_exports" {
+  name = "${var.name}-account-exports"
+  tags = var.tags
+}
+
+resource "aws_iam_user_policy" "account_exports" {
+  name = "gdpr-exports-rw"
+  user = aws_iam_user.account_exports.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ExportObjects"
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload"]
+        Resource = ["${var.gdpr_exports_bucket_arn}/exports/*"]
+      },
+    ]
+  })
+}
+
+resource "aws_iam_access_key" "account_exports" {
+  user = aws_iam_user.account_exports.name
+}
+
+resource "aws_secretsmanager_secret" "account_exports" {
+  name                    = "${var.name}-account-exports"
+  recovery_window_in_days = var.secret_recovery_window_days
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "account_exports" {
+  secret_id = aws_secretsmanager_secret.account_exports.id
+  secret_string = jsonencode({
+    access_key_id     = aws_iam_access_key.account_exports.id
+    secret_access_key = aws_iam_access_key.account_exports.secret
   })
 }

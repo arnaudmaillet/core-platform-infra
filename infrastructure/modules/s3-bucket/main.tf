@@ -9,8 +9,11 @@
 #                root account can delete/overwrite before retention), SSE-KMS
 #                under the audit KEK. This is the external-witness anchor sink.
 #
+#   * gdpr-exports — no versioning, objects expire after `expiration_days`.
+#
 # Public access is always fully blocked; access is granted only via the
-# consumer's IRSA policy (modules/security/irsa-roles), scoped to this ARN.
+# consumer's IRSA policy (modules/security/irsa-roles) or static-key IAM user
+# (modules/app-secrets), scoped to this ARN.
 
 resource "aws_s3_bucket" "this" {
   bucket = var.name
@@ -76,4 +79,29 @@ resource "aws_s3_bucket_cors_configuration" "this" {
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
+}
+
+# Expiry — only for buckets of short-lived objects (GDPR exports: links live 7
+# days, objects 8). Also drops noncurrent versions and stale multipart uploads.
+resource "aws_s3_bucket_lifecycle_configuration" "this" {
+  count  = var.expiration_days > 0 ? 1 : 0
+  bucket = aws_s3_bucket.this.id
+
+  rule {
+    id     = "expire-objects"
+    status = "Enabled"
+    filter {}
+
+    expiration {
+      days = var.expiration_days
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 1
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.this]
 }

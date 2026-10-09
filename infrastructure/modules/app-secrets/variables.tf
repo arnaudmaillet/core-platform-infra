@@ -31,6 +31,27 @@ variable "ses_from_address" {
   default     = "no-reply@core-platform.click"
 }
 
+variable "gdpr_exports_bucket_arn" {
+  type        = string
+  description = "ARN of the GDPR export bucket (data/gdpr-exports). The account-exports static-key user may read/write/delete only under its exports/ prefix."
+}
+
+variable "protect_mfa_seed_key" {
+  type        = bool
+  description = "prevent_destroy on the auth MFA seed key and its secret. true in prod: losing the key locks every 2FA account out. false where the env (and its accounts) is disposable, like staging."
+  default     = false
+}
+
+variable "mfa_seed_key_id" {
+  type        = string
+  description = "Key id stamped on every TOTP seed ciphertext (AUTH_MFA_SEED_KEY_ID, <= 16 chars, [a-z0-9-]). A rotation uses a new id."
+  default     = "k1"
+  validation {
+    condition     = can(regex("^[a-z0-9-]{1,16}$", var.mfa_seed_key_id))
+    error_message = "mfa_seed_key_id must be 1-16 chars of [a-z0-9-]."
+  }
+}
+
 variable "secret_recovery_window_days" {
   type        = number
   description = "Secrets Manager recovery window (days). 0 = delete immediately on destroy (disposable/staging); 7-30 = recoverable (prod)."

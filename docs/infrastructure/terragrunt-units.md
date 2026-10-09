@@ -101,7 +101,8 @@ outputs** = what downstream units read.
 | **`data/audit-kms`** | `kms-key` | — | Audit **KEK** (wraps per-subject DEKs; GDPR crypto-shred). → key ARN. Sole principal is the audit IRSA role. |
 | **`data/audit-worm`** | `s3-bucket` | `audit-kms` | Compliance evidence bucket: **Object-Lock COMPLIANCE** + SSE-KMS under the audit KEK. → bucket ARN. |
 | **`data/cnpg-backups`** | `s3-bucket` | — | Backup target for the in-cluster CNPG Postgres clusters. → bucket ARN. |
-| **`data/app-secrets`** | `app-secrets` | `media-bucket`, `audit-worm`, `audit-kms` | Seeds/organizes the Secrets Manager entries the fleet's ExternalSecrets pull. Ordering-only for the argocd unit (`skip_outputs`). |
+| **`data/gdpr-exports`** | `s3-bucket` | — | Private GDPR export bucket: no versioning, objects expire after 8 days (`expiration_days`). → bucket ARN (scopes the `account-exports` user in `app-secrets`). |
+| **`data/app-secrets`** | `app-secrets` | `media-bucket`, `audit-worm`, `audit-kms`, `gdpr-exports` | Seeds/organizes the Secrets Manager entries the fleet's ExternalSecrets pull. Ordering-only for the argocd unit (`skip_outputs`). |
 
 ### Security & delivery
 
@@ -198,7 +199,7 @@ gotchas that outlive a `destroy`, is documented in the
 | `acm-cert` | `networking/acm-cert` |
 | `eks` | `eks` (staging, dev, prod) |
 | `msk` / `elasticache` / `opensearch` | `data/msk` · `data/elasticache` · `data/opensearch` |
-| `s3-bucket` (generic) | `data/media-bucket` (Lock off) · `data/audit-worm` (Lock: GOVERNANCE staging / COMPLIANCE prod) · `data/cnpg-backups` · `data/scylla-backups` |
+| `s3-bucket` (generic) | `data/media-bucket` (Lock off) · `data/audit-worm` (Lock: GOVERNANCE staging / COMPLIANCE prod) · `data/cnpg-backups` · `data/scylla-backups` · `data/gdpr-exports` (expiry 8 days) |
 | `kms-key` | `data/audit-kms` |
 | `app-secrets` | `data/app-secrets` |
 | `security/irsa-roles` | `security/irsa-roles` |
