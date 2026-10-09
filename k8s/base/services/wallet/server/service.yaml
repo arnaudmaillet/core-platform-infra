@@ -1,0 +1,17 @@
+# k8s/base/services/wallet/server/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wallet-server
+  labels:
+    app: wallet-server
+spec:
+  selector:
+    app: wallet-server
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 50072
+      targetPort: grpc
+      appProtocol: grpc
+  type: ClusterIP

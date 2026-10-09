@@ -1,0 +1,24 @@
+# k8s/base/services/wallet/server/hpa.yaml
+#
+# Server profile = RPC plane (every like is a Stake) → scale on CPU utilization.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wallet-server
+  labels:
+    app: wallet-server
+    role: server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wallet-server
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

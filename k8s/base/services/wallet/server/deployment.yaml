@@ -1,0 +1,99 @@
+# k8s/base/services/wallet/server/deployment.yaml
+#
+# wallet-server — TIER-0 in-app economy ledger (core-platform-backend #665):
+# points (likes are points) and gems, per account. Fail-closed: it refuses
+# rather than mis-credits, so readiness gates on Postgres. Its own Postgres
+# (CNPG wallet-postgres), schema owned by the migrator init container. No
+# real-money purchase, no StoreKit, no outbound internet. Image tags + the
+# `infra-config` and `wallet-config` ConfigMaps are supplied by the overlay.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wallet-server
+  labels:
+    app: wallet-server
+    role: server
+    tier: tier-0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wallet-server
+  template:
+    metadata:
+      labels:
+        app: wallet-server
+        role: server
+        tier: tier-0
+    spec:
+      # Spread replicas across AZs and nodes (ScheduleAnyway: never blocks
+      # scheduling; the PDB is the hard guard against voluntary co-eviction).
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: wallet-server
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: wallet-server
+      # Apply the wallet schema before the server boots (idempotent, safe on
+      # every rollout; exits 0 once the schema is up to date).
+      initContainers:
+        - name: migrate-wallet
+          image: core-platform-migrator
+          args: ["wallet"]
+          envFrom:
+            - configMapRef:
+                name: wallet-config
+      containers:
+        - name: server
+          image: core-platform-wallet-server
+          envFrom:
+            - configMapRef:
+                name: wallet-config
+          env:
+            # The runtime is fail-closed on this file; mounted from infra-config.
+            - name: INFRA_CONFIG_PATH
+              value: /etc/infra/infrastructure.toml
+            - name: WALLET_GRPC_ADDR
+              value: "0.0.0.0:50072"
+          ports:
+            - name: grpc
+              containerPort: 50072
+          volumeMounts:
+            - name: infra-config
+              mountPath: /etc/infra
+              readOnly: true
+          # Readiness = the per-service key, SERVING only once the storage probes
+          # pass: a pod that can't reach Postgres leaves rotation (TIER-0).
+          readinessProbe:
+            grpc:
+              port: 50072
+              service: wallet.v1.WalletService
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          # Liveness = process alive (""), so a backend blip never restart-loops.
+          livenessProbe:
+            grpc:
+              port: 50072
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            # Not soak-calibrated yet (new service): account-sized. Refine with
+            # `kubectl top` on the first bring-up.
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            # No CPU limit: CFS throttling breaks tokio tail latency under
+            # spikes; memory stays the hard cap.
+            limits:
+              memory: "512Mi"
+      volumes:
+        - name: infra-config
+          configMap:
+            name: infra-config
