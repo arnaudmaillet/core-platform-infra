@@ -6,6 +6,10 @@
 # the .cn registrar to the `name_servers` output; global/web/wynn-cn-aasa (its
 # ACM DNS validation) only succeeds once that delegation resolves.
 #   terragrunt output name_servers
+# If a wynn.cn hosted zone ALREADY exists in this account, import it instead of
+# creating a second one (two zones make `data "aws_route53_zone"` in
+# global/web/wynn-cn-aasa fail on two matches, and split the delegation):
+#   terragrunt import aws_route53_zone.main <ZONE_ID>
 
 include "root" {
   path = find_in_parent_folders("root.hcl")
