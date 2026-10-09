@@ -85,12 +85,29 @@ per_secs = 3600                     # 10 an hour per IP
 burst    = 3
 scope    = "per_ip"
 
+# FindProfilesByContacts (address-book matching, up to 1000 hashed contacts a
+# call): per account, against address-book enumeration. A burst of 10 covers an
+# onboarding sync of a large address book, then ~100 a day (one every 864 s).
+[traffic.profiles.contacts]
+rps      = 100
+per_secs = 86400                    # 100 a day per caller
+burst    = 10
+scope    = "per_caller"
+
 [traffic.edge_bindings]
 "/auth.v1.AuthService/StartGuestSession"   = "guest-start"
 "/auth.v1.AuthService/Login"               = "login"
 "/auth.v1.AuthService/Refresh"             = "login"
 "/auth.v1.AuthService/SignUp"              = "sign-up"
 "/auth.v1.AuthService/StartVerification"   = "verification"
+# Second step of a two-step sign-in: public like Login (its mfa_token is the
+# proof); auth also bounds guesses per account (5 per 15 min).
+"/auth.v1.AuthService/CompleteLogin"       = "login"
+# Single-use challenges / nonces written to Redis by anonymous callers.
+"/auth.v1.AuthService/StartFederatedSignIn"   = "sign-up"
+"/auth.v1.AuthService/StartPasskeySignIn"     = "sign-up"
+"/auth.v1.AuthService/StartDeviceAttestation" = "guest-start"
+"/account.v1.AccountService/FindProfilesByContacts" = "contacts"
 "/engagement.v1.EngagementService/RecordView"  = "counters"
 "/engagement.v1.EngagementService/RecordShare" = "counters"
 # Public reads (edge rule `public_read` in the backend's service.rs files).
@@ -99,9 +116,11 @@ scope    = "per_ip"
 "/comment.v1.CommentService/ListTopLevel"                = "public-read"
 "/counter.v1.CounterService/BatchGetCounters"            = "public-read"
 "/engagement.v1.EngagementService/GetPostEngagement"     = "public-read"
+"/engagement.v1.EngagementService/BatchGetLikes"         = "public-read"
 "/geo_discovery.v1.GeoDiscoveryService/GetGeoTimeline"   = "public-read"
 "/geo_discovery.v1.GeoDiscoveryService/QueryTile"        = "public-read"
 "/geo_discovery.v1.GeoDiscoveryService/GetCountryAccess" = "public-read"
+"/geo_discovery.v1.GeoDiscoveryService/GetCountryStandings" = "public-read"
 "/media.v1.MediaService/ResolveDelivery"                 = "public-read"
 "/media.v1.MediaService/BatchResolveDelivery"            = "public-read"
 "/post.v1.PostService/GetPost"                           = "public-read"
@@ -109,6 +128,7 @@ scope    = "per_ip"
 "/profile.v1.ProfileService/GetProfileById"              = "public-read"
 "/profile.v1.ProfileService/GetProfileByHandle"          = "public-read"
 "/profile.v1.ProfileService/CheckHandleAvailability"     = "public-read"
+"/profile.v1.ProfileService/ResolveShareToken"           = "public-read"
 "/search.v1.SearchService/Search"                        = "public-read"
 "/search.v1.SearchService/Suggest"                       = "public-read"
 "/search.v1.SearchService/MultiSearch"                   = "public-read"
