@@ -74,7 +74,9 @@ sequence:
 
 ```bash
 # 0. Account-global units, once per account (not torn down with the env):
-#    global/networking/route53 → global/messaging/{ses-identity,sms} (+ artifacts/ecr).
+#    global/networking/route53 → global/messaging/{ses-identity,sms} (+ artifacts/ecr);
+#    global/networking/route53-wynn-cn → delegate wynn.cn's NS at the registrar →
+#    global/web/wynn-cn-aasa (its ACM validation waits on the delegation).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
 #    security/{irsa-roles,waf-edge} → kubernetes/argocd). GITHUB_TOKEN is required —
 #    the argocd unit registers the repo with ArgoCD.
