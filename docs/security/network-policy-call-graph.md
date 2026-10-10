@@ -6,15 +6,18 @@ Derived from code + config, not guesswork:
 
 - **gRPC ports** — `k8s/base/services/*/.../{deployment,service}.yaml`.
 - **gRPC mesh edges** — the tonic `*Client` types actually instantiated under
-  `crates/services/*/src` (the *complete* set is 6 — see below) cross-checked with
+  `crates/services/*/src` (the complete set is in §2) cross-checked with
   the `*_GRPC_ENDPOINT` config in `k8s/overlays/staging/*.env`.
 - **Kafka event plane** — the generated topic-wiring in
   `docs/domain/EVENT_CATALOG.md` (authoritative: `crates/contracts/event-topology`).
 - **Datastore egress** — the `*.env` per service.
 
-> **Key result:** the intra-fleet gRPC mesh is **tiny** — only **6 services** receive
-> calls from another fleet service. The rest is Kafka (egress to MSK, not pod→pod)
-> or client-facing. That makes ingress micro-segmentation low-risk; egress lockdown
+> **Key result:** the intra-fleet gRPC mesh is **small and explicit** — only the
+> **tightened callees** of the §2 inbound matrix (account, social-graph, post,
+> profile, moderation, auth, wallet, media) receive calls from another fleet
+> service, each from a named caller list; it grew from 6 as guest mode, the GDPR
+> export, wallet and verification landed. The rest is Kafka (egress to MSK, not
+> pod→pod) or client-facing. That makes ingress micro-segmentation low-risk; egress lockdown
 > is the harder half (managed AWS ENIs).
 
 ---
@@ -52,7 +55,7 @@ Derived from code + config, not guesswork:
 
 ---
 
-## 2. Inbound gRPC mesh (the complete set — 6 edges)
+## 2. Inbound gRPC mesh (the complete set)
 
 The only `*Client` types instantiated anywhere in `crates/services/*`:
 
@@ -81,6 +84,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `account` | `ModerationServiceClient` | `moderation:50061` | a supervised teen's reports for their supervisor (`ListReportsByReporter`) |
 | `wallet` | post, comment, social-graph clients | `post:50056`, `comment:50057`, `social-graph:50053` | a like (`Stake`) checks its target exists and is visible to the one who likes |
 | `wallet` | `EngagementServiceClient` | `engagement:50058` | stake settlement (`GetLikePositions`, shadow mode) |
+| `engagement` | `SocialGraphServiceClient` | `social-graph:50053` | Likes tab: `CheckAccess` for non-owner readers — **fail closed** (empty tab) |
 | `geo-discovery`, `account` | `WalletServiceClient` | `wallet:50072` | country unlocks (`GetWallet`, `SpendGems`); GDPR export (`wallet.json`) |
 | `profile` | `MediaServiceClient` | `media:50063` | verification documents: the requester's own, READY (`GetAsset`) |
 
@@ -89,7 +93,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | Callee | Allowed in-mesh callers | Port |
 |---|---|---|
 | `account` | `auth`, `moderation`, `geo-discovery` (country unlocks: home country) | 50059 |
-| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account`, `wallet` | 50053 |
+| `social-graph` | `counter`, `timeline`, `post`, `comment`, `search`, `geo-discovery`, `chat`, `account`, `wallet`, `engagement` | 50053 |
 | `post` | `search`, `comment`, `moderation`, `engagement`, `counter-server`, `account`, `wallet` | 50056 |
 | `profile` | `search`, `auth` (owned profiles → the edge token's `pids` claim), `moderation` (report target → account), `account`, `notification` | 50052 |
 | `moderation` | `media`, `account` | 50061 |
@@ -221,7 +225,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | social-graph | CNPG, Redis, Scylla | — | both |
 | post | CNPG, Scylla | social-graph:50053 | both |
 | comment | CNPG, Scylla | post:50056, social-graph:50053 | both |
-| engagement | CNPG, Redis, Scylla | post:50056 | both |
+| engagement | CNPG, Redis, Scylla | post:50056, social-graph:50053 | both |
 | counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053, post:50056 (server) | both |
 | geo-discovery | CNPG, Redis, Scylla | social-graph:50053, wallet:50072, account:50059 | consumer |
 | notification | CNPG, Redis, Scylla, **internet** (APNs, see below) | profile:50052 | consumer |
