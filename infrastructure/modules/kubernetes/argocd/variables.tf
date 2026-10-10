@@ -57,6 +57,10 @@ variable "media_cloudfront_distribution_id" {
   type    = string
   default = ""
 }
+variable "mesh_token_issuer" {
+  type    = string
+  default = ""
+}
 
 # Per-env bootstrap wiring (defaults preserve the original dev behavior).
 variable "bootstrap_path" {

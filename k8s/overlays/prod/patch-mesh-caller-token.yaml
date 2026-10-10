@@ -1,0 +1,30 @@
+# k8s/overlays/prod/patch-mesh-caller-token.yaml
+#
+# Mesh CALLERS of gated RPCs (#62): a projected ServiceAccount token for the
+# audience core-platform-mesh, sent as gRPC metadata `x-mesh-token` on every mesh
+# call. The kubelet rotates the file (1 h expiry, refreshed at 80 %), and the
+# backend re-reads it. Targeted by app label in kustomization.yaml.
+# Readable by the app (UID 10001) because every container of the pod shares the
+# pod-level runAsUser (patch-securitycontext.yaml), so the kubelet owns the token
+# to that UID; a sidecar with another UID would need fsGroup instead.
+- op: add
+  path: /spec/template/spec/volumes/-
+  value:
+    name: mesh-token
+    projected:
+      sources:
+        - serviceAccountToken:
+            audience: core-platform-mesh
+            expirationSeconds: 3600
+            path: token
+- op: add
+  path: /spec/template/spec/containers/0/volumeMounts/-
+  value:
+    name: mesh-token
+    mountPath: /var/run/secrets/mesh
+    readOnly: true
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: MESH_TOKEN_FILE
+    value: /var/run/secrets/mesh/token

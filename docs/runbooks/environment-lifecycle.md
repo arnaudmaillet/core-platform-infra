@@ -112,6 +112,11 @@ kubectl apply -k k8s/base/infra/scylla-cluster
   `MEDIA_CLOUDFRONT_DISTRIBUTION_ID` from the CMP, and with a literal `${…}` every
   takedown purge fails, so takedowns keep retrying. The unit grants the purge
   right first, then the id reaches media.
+- `kubernetes/argocd` must also be re-applied after `eks` (every bring-up does):
+  it writes `MESH_TOKEN_ISSUER` (the EKS OIDC issuer) into the CMP. A literal
+  `${MESH_TOKEN_ISSUER}` on moderation/wallet makes every mesh caller's issuer
+  mismatch: logged under `MESH_CALLER_GATE=log`, **refused** under `enforce`.
+  Check the issuer before flipping a callee to `enforce` (#62).
 - **wallet-server (new service, core-platform-infra#41):**
   - `global/artifacts/ecr` must have created `core-platform-wallet-server`, and the
     backend must have added `wallet-server` to `FLEET_BINS` with a pin landed since.
