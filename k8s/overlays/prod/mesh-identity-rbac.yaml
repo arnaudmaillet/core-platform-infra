@@ -1,0 +1,22 @@
+# k8s/overlays/prod/mesh-identity-rbac.yaml
+#
+# The gated mesh callees verify callers' projected ServiceAccount tokens against
+# the cluster's own JWKS, fetched in-cluster from the API server
+# (GET https://kubernetes.default.svc/openid/v1/jwks) with their own token.
+# Kubernetes ships the ClusterRole for it but binds it to no one by default, so
+# bind it to exactly the callees' ServiceAccounts (#62). Public key material.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mesh-jwks-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:service-account-issuer-discovery
+subjects:
+  - kind: ServiceAccount
+    name: moderation-server
+    namespace: default
+  - kind: ServiceAccount
+    name: wallet-server
+    namespace: default

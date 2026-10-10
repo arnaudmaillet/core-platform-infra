@@ -42,6 +42,7 @@ module "bootstrap" {
   waf_edge_acl_arn        = var.waf_edge_acl_arn
 
   media_cloudfront_distribution_id = var.media_cloudfront_distribution_id
+  mesh_token_issuer                = var.mesh_token_issuer
 }
 
 # 2. Installation des Addons EKS

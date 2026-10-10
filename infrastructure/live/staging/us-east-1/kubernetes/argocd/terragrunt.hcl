@@ -123,6 +123,8 @@ inputs = {
   ssl_certificate_arn = dependency.acm_cert.outputs.certificate_arn
   waf_edge_acl_arn    = dependency.waf_edge.outputs.web_acl_arn
   media_cloudfront_distribution_id = dependency.media_cdn.outputs.distribution_id
+  # The EKS OIDC issuer = the `iss` of every projected ServiceAccount token (#62).
+  mesh_token_issuer = dependency.eks.outputs.oidc_provider_url
 
   # --- CMP envsubst values (data-store endpoints for the workload overlay) ---
   msk_bootstrap_brokers = dependency.msk.outputs.bootstrap_brokers_sasl_scram

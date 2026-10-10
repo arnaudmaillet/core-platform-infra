@@ -102,6 +102,24 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `media` | `account` (GDPR export, `ListAssetsByOwner`), `profile` (verification documents, `GetAsset`) **only**: `GetPrivateDocumentUrl` signs links to ID documents | 50063 |
 | `auth` (JWKS, HTTP) | **every server pod** — all edge-token verifiers | 8081 |
 
+### Mesh caller identity (L7, #62)
+
+NetworkPolicy is L4: it can't tell *which RPC* a caller may reach on a port. For
+the sensitive mesh-only RPCs (`wallet.SpendGems`, wallet's export RPCs,
+`moderation.ListReportsByReporter`) the callee also checks **which service** is
+calling:
+- callers (`account-server`, `geo-discovery-server`) run under their own
+  ServiceAccount and send a projected token (audience `core-platform-mesh`,
+  `patch-mesh-caller-token.yaml`) as `x-mesh-token`;
+- gated callees (`moderation-server`, `wallet-server`) verify it against the
+  cluster's JWKS, fetched in-cluster from the API server
+  (`mesh-identity-rbac.yaml`), issuer `MESH_TOKEN_ISSUER` (the EKS OIDC issuer,
+  via the CMP);
+- `MESH_CALLER_GATE`: `log` first, `enforce` once the callers run clean. To gate
+  another RPC or add a caller: give the service its own ServiceAccount
+  (`service-accounts.yaml` + `patch-mesh-identity.yaml`) and, for a caller, add
+  it to the `patch-mesh-caller-token.yaml` selector.
+
 `comment` takes one in-mesh caller, `moderation` (report target lookup), on 50057,
 and `geo-discovery` one, `timeline` (NEARBY), on 50054: both are still in the
 same-namespace allow, not tightened.
@@ -247,6 +265,11 @@ lockdown must keep these open from `auth-server`, or sign-up and sign-in break:
   A VPC interface endpoint (`com.amazonaws.us-east-1.email-smtp`) keeps it private;
 - one-time SMS codes (SNS), **:443**: `sns.us-east-1.amazonaws.com`. A VPC
   interface endpoint for SNS keeps it private.
+
+**Gated mesh callees' API-server egress** (#62): `moderation-server` and
+`wallet-server` fetch the cluster's JWKS from `kubernetes.default.svc:443`
+(the API server). The lockdown must keep that open for them, or the verifier
+can't load and every mesh caller is refused under `enforce`.
 
 **notification's external egress** (iOS push, core-platform-infra#39): the lockdown
 must keep **:443** open from `notification-server` to `api.push.apple.com`, and to

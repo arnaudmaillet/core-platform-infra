@@ -24,6 +24,7 @@ locals {
     "KEYCLOAK_ADMIN_URL",
     "WAF_EDGE_ACL_ARN",
     "MEDIA_CLOUDFRONT_DISTRIBUTION_ID",
+    "MESH_TOKEN_ISSUER",
   ]
 
   cmp_generate_script = <<-SH

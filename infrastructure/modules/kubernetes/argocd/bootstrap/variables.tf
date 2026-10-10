@@ -58,6 +58,11 @@ variable "media_cloudfront_distribution_id" {
   default     = ""
   description = "Media CDN distribution id (networking/media-cdn; CMP var MEDIA_CLOUDFRONT_DISTRIBUTION_ID, media's takedown purges). Empty for envs without the workload overlay (dev)."
 }
+variable "mesh_token_issuer" {
+  type        = string
+  default     = ""
+  description = "The cluster's ServiceAccount token issuer (the EKS OIDC issuer URL; CMP var MESH_TOKEN_ISSUER): gated mesh callees verify callers' projected tokens against it (#62). Empty for envs without the workload overlay (dev)."
+}
 
 # Per-env bootstrap wiring (defaults preserve the original single-env/dev behavior).
 variable "bootstrap_path" {

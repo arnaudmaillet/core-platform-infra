@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: 9bf3d68f54930c4dedbe8c594742c3a039892e6d17666912e2cedd13f7714f23
-  translated_at: 2026-10-09
+  source_sha256: 6476a12f22d8344ed4f819531f6f98aea2636a55b1f3df3b14e86d4476fbdc90
+  translated_at: 2026-10-10
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`environment-lifecycle.md`](./environment-lifecycle.md) fait foi.
@@ -132,6 +132,12 @@ défaillance) :**
   `MEDIA_CLOUDFRONT_DISTRIBUTION_ID` du CMP, et avec un `${…}` littéral chaque purge
   de retrait échoue, donc les retraits sont retentés sans fin. L'unité accorde
   d'abord le droit de purge, puis l'id arrive à media.
+- `kubernetes/argocd` doit aussi être ré-appliquée après `eks` (c'est le cas à
+  chaque bring-up) : elle écrit `MESH_TOKEN_ISSUER` (l'issuer OIDC d'EKS) dans le
+  CMP. Un `${MESH_TOKEN_ISSUER}` littéral sur moderation/wallet fait échouer
+  l'issuer de tout appelant mesh : journalisé avec `MESH_CALLER_GATE=log`,
+  **refusé** avec `enforce`. Vérifiez l'issuer avant de passer un appelé en
+  `enforce` (#62).
 - **wallet-server (nouveau service, core-platform-infra#41) :**
   - `global/artifacts/ecr` doit avoir créé `core-platform-wallet-server`, et le
     backend doit avoir ajouté `wallet-server` à `FLEET_BINS`, avec un pin arrivé

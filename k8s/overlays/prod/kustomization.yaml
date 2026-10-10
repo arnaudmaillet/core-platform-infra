@@ -75,6 +75,7 @@ resources:
   - scheduledbackups.yaml
   # IRSA-annotated ServiceAccounts (audit-server/-worker, media-server).
   - service-accounts.yaml
+  - mesh-identity-rbac.yaml
   # KEDA SASL auth for the MSK lag scalers (counter/realtime/audit workers).
   - keda-trigger-auth.yaml
   - external-secrets.yaml
@@ -230,6 +231,13 @@ patches:
     target:
       kind: Deployment
       name: notification-server
+  # Mesh caller identity (#62): own ServiceAccounts for the participants, and a
+  # projected mesh token on the callers of gated RPCs.
+  - path: patch-mesh-identity.yaml
+  - path: patch-mesh-caller-token.yaml
+    target:
+      kind: Deployment
+      labelSelector: "app in (account-server,geo-discovery-server)"
   - path: patch-backend-creds.yaml
     target:
       kind: Deployment

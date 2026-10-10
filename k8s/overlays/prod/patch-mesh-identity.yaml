@@ -1,0 +1,39 @@
+# k8s/overlays/prod/patch-mesh-identity.yaml
+#
+# Runs the mesh-identity participants under their own ServiceAccount
+# (service-accounts.yaml), so a caller's projected token names it (#62).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-server
+spec:
+  template:
+    spec:
+      serviceAccountName: account-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: geo-discovery-server
+spec:
+  template:
+    spec:
+      serviceAccountName: geo-discovery-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moderation-server
+spec:
+  template:
+    spec:
+      serviceAccountName: moderation-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wallet-server
+spec:
+  template:
+    spec:
+      serviceAccountName: wallet-server

@@ -125,6 +125,8 @@ inputs = {
   ssl_certificate_arn = dependency.acm_cert.outputs.certificate_arn
   waf_edge_acl_arn    = dependency.waf_edge.outputs.web_acl_arn
   media_cloudfront_distribution_id = dependency.media_cdn.outputs.distribution_id
+  # The EKS OIDC issuer = the `iss` of every projected ServiceAccount token (#62).
+  mesh_token_issuer = dependency.eks.outputs.oidc_provider_url
   # Locks the internet-facing ArgoCD + Grafana admin ALBs to the admin/CI ranges
   # (same REPLACE.ME sentinel as the EKS endpoint — fill before first apply).
   admin_cidrs = local.env_vars.locals.admin_cidrs
