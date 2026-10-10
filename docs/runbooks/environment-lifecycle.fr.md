@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: 6476a12f22d8344ed4f819531f6f98aea2636a55b1f3df3b14e86d4476fbdc90
+  source_sha256: e61832791450f6e365887abd5c3988dc0d1434d42f447ec57ed2ab2029f97d6e
   translated_at: 2026-10-10
   status: complete
 ---
@@ -208,6 +208,27 @@ kubectl get scyllaclusters.scylla.scylladb.com -A
 Si un endpoint placeholder a fuité dans un pod (littéral
 `${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}`), corrigez selon le
 [mode de défaillance CMP GitOps](../infrastructure/gitops-argocd.md#34-cmp--envsubst-render-failures-staging-fleet-only).
+
+### Interrupteurs de rollout ponctuels (environnements qui gardent des données seulement)
+
+Certains changements backend demandent une passe **unique** sur des données
+antérieures à eux. Ce sont des variables d'env à activer explicitement pour **un
+rollout**, puis retirées au commit suivant. Sur un environnement **neuf** (une
+reconstruction de staging, le premier bring-up de la prod), il n'y a rien à
+rattraper : ignorez-les. Décidez **avant la synchro de la Phase 2**, pour que
+l'interrupteur parte avec le rollout qui amène les nouveaux consommateurs. La
+rétention d'un topic est définie dans le registre event-topology du backend
+(`crates/contracts/event-topology`, provisionné par le topic-provisioner) ; sur un
+cluster en marche, lisez `retention.ms` avec
+`kafka-configs.sh --describe --entity-type topics --entity-name <topic>`.
+
+| Interrupteur (service) | À activer quand | Terminé quand les pods journalisent | Ensuite |
+|---|---|---|---|
+| `PROFILE_BACKFILL_TAB_SETTINGS=true` (profile-server ; core-platform-infra#66, backend #873/#877) | l'env contient déjà des profils dont les réglages d'onglets ont changé **avant** la rétention de `profile.v1.events`, au moment où post / engagement consomment `ProfileTabSettingsChanged` pour la première fois | `tab settings backfill done` | retirez la variable au commit suivant. Chaque réplique la relance à chaque démarrage : sans danger (le dernier écrit gagne) mais charge N× le topic, et une ancienne valeur peut écraser une plus récente si des titulaires modifient leurs réglages entre-temps |
+
+Procédure : ajoutez la variable à `k8s/overlays/<env>/profile.env` dans sa propre
+PR, laissez ArgoCD redéployer profile-server, attendez la ligne de log, puis une
+seconde PR la retire.
 
 ---
 

@@ -186,6 +186,25 @@ kubectl get scyllaclusters.scylla.scylladb.com -A
 If a placeholder endpoint leaked into a pod (`${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}`
 literal), fix per the [GitOps CMP failure mode](../infrastructure/gitops-argocd.md#34-cmp--envsubst-render-failures-staging-fleet-only).
 
+### One-off rollout switches (environments that keep data only)
+
+Some backend changes need a **one-shot** pass over data that predates them.
+They are opt-in env vars set for **one rollout**, then removed in the next
+commit. On a **fresh** environment (a staging rebuild, prod's first bring-up)
+there is nothing to catch up: skip them. Decide **before the Phase 2 sync**, so
+the switch rides the same rollout that brings the new consumers. A topic's
+retention is set in the backend's event-topology registry
+(`crates/contracts/event-topology`, provisioned by the topic-provisioner); on a
+live cluster, read `retention.ms` with
+`kafka-configs.sh --describe --entity-type topics --entity-name <topic>`.
+
+| Switch (service) | Set it when | Done when the pods log | Then |
+|---|---|---|---|
+| `PROFILE_BACKFILL_TAB_SETTINGS=true` (profile-server; core-platform-infra#66, backend #873/#877) | the env already holds profiles whose tab settings were changed **before** `profile.v1.events`' retention, when post / engagement first consume `ProfileTabSettingsChanged` | `tab settings backfill done` | remove the var in the next commit. Every replica re-runs it at each start: harmless (last writer wins) but N× topic load, and an old value can overtake a newer one if owners edit meanwhile |
+
+Procedure: add the var to `k8s/overlays/<env>/profile.env` in its own PR, let
+ArgoCD roll profile-server, watch for the log line, then a second PR removes it.
+
 ---
 
 ## Phase 4 — Graceful teardown
