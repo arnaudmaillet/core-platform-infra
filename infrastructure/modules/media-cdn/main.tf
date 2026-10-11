@@ -10,10 +10,12 @@
 #   * GET/HEAD only, HTTPS only (HTTP redirects), compression on. HLS (.m3u8,
 #     .m4s) is served as-is.
 #   * NEVER served, whatever the key: quarantine/ (takedowns,
-#     core-platform-backend#758), uploads/ (originals) and private/ (verification
-#     documents, #777): an explicit Deny for the distribution in the bucket policy.
-#     Staff read private documents only through short-lived S3 presigned URLs
-#     signed with media's own keys, which this policy does not affect.
+#     core-platform-backend#758), uploads/ (originals), private/ (verification
+#     documents, #777) and restricted/ (non-public renditions, per asset,
+#     core-platform-infra#56): an explicit Deny for the distribution in the bucket
+#     policy. Those are read only through short-lived S3 presigned URLs signed
+#     with media's own keys, which this policy does not affect. restricted/ is
+#     inert until media writes there (MEDIA_RESTRICTED_PREFIX_ENABLED).
 #   * Takedown purge: the media IAM user gets cloudfront:CreateInvalidation on
 #     this distribution (MEDIA_CLOUDFRONT_DISTRIBUTION_ID).
 #
