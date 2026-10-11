@@ -196,21 +196,23 @@ patches:
     target:
       kind: Deployment
   # Client edge: enable the :9443 edge listener (+ verifier config) on the
-  # client-facing servers only, and expose it on their Services for the ALB.
+  # client-facing servers only (label client-edge=true, set in their base
+  # kustomization.yaml), and expose it on their Services for the ALB.
   - path: patch-client-edge-env.yaml
     target:
       kind: Deployment
-      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server,wallet-server)"
+      labelSelector: "client-edge=true"
   # Edge-token revocation check (#73): every edge-token verifier reads auth's
-  # Redis. The client-edge servers plus the two verifiers outside that set.
+  # Redis. The client-edge servers plus the two verifiers outside that set
+  # (realtime-gateway, audit-server); the labels live on the base kustomizations.
   - path: patch-edge-revocation-env.yaml
     target:
       kind: Deployment
-      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server,wallet-server,realtime-gateway,audit-server)"
+      labelSelector: "edge-token-verifier=true"
   - path: patch-client-edge-service-port.yaml
     target:
       kind: Service
-      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server,wallet-server)"
+      labelSelector: "client-edge=true"
   # Inject the synced MSK/Redis creds into every service container.
   # One offensive-term list for comment (hidden comments) and chat (message
   # requests): a shared ConfigMap mounted in both, same path, same env.
