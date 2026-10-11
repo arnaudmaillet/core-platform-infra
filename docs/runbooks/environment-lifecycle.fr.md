@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: e61832791450f6e365887abd5c3988dc0d1434d42f447ec57ed2ab2029f97d6e
-  translated_at: 2026-10-10
+  source_sha256: 12a4474c223b2973b5ee1a4b58afc95391b05b0e6df5c574881ade3bbe2a4632
+  translated_at: 2026-10-11
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`environment-lifecycle.md`](./environment-lifecycle.md) fait foi.
@@ -138,6 +138,16 @@ défaillance) :**
   l'issuer de tout appelant mesh : journalisé avec `MESH_CALLER_GATE=log`,
   **refusé** avec `enforce`. Vérifiez l'issuer avant de passer un appelé en
   `enforce` (#62).
+- **ElastiCache avant les vérificateurs fail-closed** (#73) : auth, moderation et
+  audit-server construisent le Redis de révocation des tokens edge au démarrage
+  et refusent de démarrer sans lui. `data/elasticache` doit être en place avant la
+  synchro, et une panne Redis pendant un rollout empêche leurs nouveaux pods de
+  démarrer (les anciens continuent de servir).
+- **Les réplicas appartiennent aux autoscalers** (#69) : les Deployments mis à
+  l'échelle par un HPA ou un ScaledObject KEDA ne portent pas de `spec.replicas`,
+  pour que le selfHeal d'ArgoCD ne réinitialise jamais ce que l'autoscaler a fixé.
+  Un nouveau Deployment démarre à 1 réplica et le HPA le monte à `minReplicas` en
+  quelques secondes. Gardez cette règle en ajoutant un HPA.
 - **wallet-server (nouveau service, core-platform-infra#41) :**
   - `global/artifacts/ecr` doit avoir créé `core-platform-wallet-server`, et le
     backend doit avoir ajouté `wallet-server` à `FLEET_BINS`, avec un pin arrivé

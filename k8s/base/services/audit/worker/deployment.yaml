@@ -21,7 +21,6 @@ metadata:
     role: worker
     tier: tier-0
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: audit-worker
@@ -30,6 +29,7 @@ spec:
       labels:
         app: audit-worker
         role: worker
+        tier: tier-0
     spec:
       # TIER-0 fail-closed — never on spot. Requires a pool that offers
       # on-demand (the Karpenter apps pool allows both since this change);

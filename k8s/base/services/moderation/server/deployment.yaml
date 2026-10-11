@@ -12,7 +12,6 @@ metadata:
     role: server
     tier: tier-0
 spec:
-  replicas: 2
   selector:
     matchLabels:
       app: moderation-server
@@ -21,6 +20,7 @@ spec:
       labels:
         app: moderation-server
         role: server
+        tier: tier-0
     spec:
       # TIER-0 fail-closed — never on spot. Requires a pool that offers
       # on-demand (the Karpenter apps pool allows both since this change);

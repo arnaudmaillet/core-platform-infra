@@ -9,8 +9,12 @@ metadata:
   name: account-server
   labels:
     app: account-server
+    role: server
+    # TIER-0 (core-platform-infra#69): auth calls GetAccountById on every sign-in,
+    # CompleteLogin, SignUp and token refresh, and fails closed, so account is on
+    # the sign-in critical path. Scales with auth (hpa.yaml).
+    tier: tier-0
 spec:
-  replicas: 2
   selector:
     matchLabels:
       app: account-server
@@ -18,6 +22,8 @@ spec:
     metadata:
       labels:
         app: account-server
+        role: server
+        tier: tier-0
     spec:
       # Spread replicas across AZs and nodes (ScheduleAnyway: never blocks
       # scheduling; the PDB is the hard guard against voluntary co-eviction).

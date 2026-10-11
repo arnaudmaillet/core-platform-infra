@@ -18,8 +18,8 @@ metadata:
     role: worker
     tier: tier-1
 spec:
-  # Replicas are owned by the KEDA ScaledObject; this is just the seed value.
-  replicas: 1
+  # No `replicas`: the KEDA ScaledObject owns it (a fixed value would fight
+  # ArgoCD selfHeal).
   selector:
     matchLabels:
       app: counter-worker
@@ -28,6 +28,7 @@ spec:
       labels:
         app: counter-worker
         role: worker
+        tier: tier-1
     spec:
       # Spread replicas across AZs and nodes (ScheduleAnyway: never blocks
       # scheduling; the PDB is the hard guard against voluntary co-eviction).
