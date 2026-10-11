@@ -6,6 +6,19 @@ include "root" {
 
 dependency "eks" {
   config_path = "../../eks"
+
+  # Plan/validate mocks let `run-all plan` cover this unit before the cluster
+  # exists. Destroy, because after a partial teardown the eks unit's outputs are
+  # gone from state and this unit's destroy dies at HCL evaluation ("no variable
+  # named dependency"), as seen live on the 2026-07-04 staging teardown. The
+  # mock cluster_name is the real one, so the planned role names are accurate.
+  mock_outputs_allowed_terraform_commands = ["validate", "plan", "destroy"]
+  mock_outputs = {
+    cluster_name       = "core-platform-dev"
+    oidc_provider_arn  = "arn:aws:iam::000000000000:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/MOCK"
+    oidc_provider_url  = "oidc.eks.us-east-1.amazonaws.com/id/MOCK"
+    node_iam_role_arns = ["arn:aws:iam::000000000000:role/mock"]
+  }
 }
 
 terraform {

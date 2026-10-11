@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./terragrunt-units.md
-  source_sha256: 2025ed6d5e853841ee6c7d9d79ebce87662598548d48c5219f5380a60350e8ca
+  source_sha256: 39eff188eb0e3ec0853e28ce7f86be267c38965636adf6a432c91fcd99e87c92
   translated_at: 2026-10-12
   status: complete
 ---
@@ -46,10 +46,15 @@ infrastructure/
 - **`region.hcl`** porte `aws_region`. Les unités le lisent via
   `read_terragrunt_config(find_in_parent_folders("region.hcl"))`.
 - Les **blocs `dependency`** câblent la consommation de sorties inter-unités et
-  *définissent le DAG*. La plupart des dépendances de datastore portent des
-  `mock_outputs` limités à `["validate","plan"]`, si bien qu'un `run-all plan`
-  fonctionne avant que les vraies ressources n'existent (bootstrap au premier run, ou
-  après un démontage complet).
+  *définissent le DAG*. La plupart des dépendances portent des `mock_outputs`
+  limités à `["validate","plan"]`, si bien qu'un `run-all plan` fonctionne avant que
+  les vraies ressources n'existent (bootstrap au premier run, ou après un démontage
+  complet). Cela couvre les datastores, ainsi que les sorties `vpc`/`eks`
+  consommées par `eks`, `data/{msk,elasticache,opensearch}` et
+  `security/irsa-roles` ; ces mocks `vpc`/`eks` autorisent aussi `destroy`, pour
+  qu'un démontage partiel ne bloque pas le destroy d'une unité dépendante. Seule
+  `kubernetes/argocd` exige encore un cluster existant pour son plan, car ses
+  providers s'y connectent.
 - **Un même module peut être à la base de plusieurs unités.** `s3-bucket` est à la
   base de trois unités différentes (`media-bucket`, `audit-worm`, `cnpg-backups`) avec
   des paramètres différents — Object-Lock activé pour l'audit, désactivé pour le média.

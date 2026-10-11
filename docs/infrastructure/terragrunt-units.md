@@ -34,9 +34,13 @@ infrastructure/
 - **`region.hcl`** carries `aws_region`. Units read it via
   `read_terragrunt_config(find_in_parent_folders("region.hcl"))`.
 - **`dependency` blocks** wire unit-to-unit output consumption and *define the DAG*.
-  Most data-store dependencies carry `mock_outputs` gated to
-  `["validate","plan"]`, so a `run-all plan` works before the real resources exist
-  (first-run bootstrap, or after a full teardown).
+  Most dependencies carry `mock_outputs` gated to `["validate","plan"]`, so a
+  `run-all plan` works before the real resources exist (first-run bootstrap, or
+  after a full teardown). This covers the data stores, and the `vpc`/`eks` outputs
+  consumed by `eks`, `data/{msk,elasticache,opensearch}` and
+  `security/irsa-roles`; those `vpc`/`eks` mocks also allow `destroy`, so a partial
+  teardown can't brick a dependent's destroy. Only `kubernetes/argocd` still needs
+  a live cluster to plan, because its providers connect to it.
 - **One module can back many units.** `s3-bucket` backs three different units
   (`media-bucket`, `audit-worm`, `cnpg-backups`) with different parameters —
   Object-Lock on for audit, off for media.
