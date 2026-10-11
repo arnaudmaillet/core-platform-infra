@@ -23,7 +23,6 @@ metadata:
     role: edge
     tier: tier-1
 spec:
-  replicas: 2
   selector:
     matchLabels:
       app: realtime-gateway
@@ -32,6 +31,7 @@ spec:
       labels:
         app: realtime-gateway
         role: edge
+        tier: tier-1
     spec:
       # Spread replicas across AZs and nodes (ScheduleAnyway: never blocks
       # scheduling; the PDB is the hard guard against voluntary co-eviction).

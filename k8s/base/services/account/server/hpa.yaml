@@ -1,0 +1,27 @@
+# k8s/base/services/account/server/hpa.yaml
+#
+# account is on auth's sign-in critical path (GetAccountById on every Login,
+# CompleteLogin, SignUp and token refresh, fail-closed): it scales with auth,
+# same profile (core-platform-infra#69). The overlay namePrefix reaches
+# scaleTargetRef.name through kustomize's built-in HPA name reference.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: account-server
+  labels:
+    app: account-server
+    role: server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: account-server
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

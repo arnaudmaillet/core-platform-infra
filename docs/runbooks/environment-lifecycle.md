@@ -117,6 +117,14 @@ kubectl apply -k k8s/base/infra/scylla-cluster
   `${MESH_TOKEN_ISSUER}` on moderation/wallet makes every mesh caller's issuer
   mismatch: logged under `MESH_CALLER_GATE=log`, **refused** under `enforce`.
   Check the issuer before flipping a callee to `enforce` (#62).
+- **ElastiCache before the fail-closed verifiers** (#73): auth, moderation and
+  audit-server build the edge-token revocation Redis at boot and refuse to start
+  without it. `data/elasticache` must be up before the sync, and a Redis outage
+  during a rollout keeps their new pods from starting (the old ones keep serving).
+- **Replicas belong to the autoscalers** (#69): Deployments scaled by an HPA or a
+  KEDA ScaledObject carry no `spec.replicas`, so ArgoCD's selfHeal never resets
+  what the autoscaler set. A new Deployment starts at 1 replica and the HPA raises
+  it to `minReplicas` within seconds. Keep it that way when adding an HPA.
 - **wallet-server (new service, core-platform-infra#41):**
   - `global/artifacts/ecr` must have created `core-platform-wallet-server`, and the
     backend must have added `wallet-server` to `FLEET_BINS` with a pin landed since.

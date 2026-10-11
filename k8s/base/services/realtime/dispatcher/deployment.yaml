@@ -16,7 +16,6 @@ metadata:
     role: worker
     tier: tier-1
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: realtime-dispatcher
@@ -25,6 +24,7 @@ spec:
       labels:
         app: realtime-dispatcher
         role: worker
+        tier: tier-1
     spec:
       # Spread replicas across AZs and nodes (ScheduleAnyway: never blocks
       # scheduling; the PDB is the hard guard against voluntary co-eviction).

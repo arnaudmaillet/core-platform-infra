@@ -19,8 +19,8 @@ metadata:
     role: server
     tier: tier-0
 spec:
-  # Fail-closed RecordPrivileged must always have capacity → never scale below 2.
-  replicas: 2
+  # No `replicas`: the HPA owns it (minReplicas 2: fail-closed RecordPrivileged
+  # must always have capacity). A fixed value would fight ArgoCD selfHeal.
   selector:
     matchLabels:
       app: audit-server
@@ -29,6 +29,7 @@ spec:
       labels:
         app: audit-server
         role: server
+        tier: tier-0
     spec:
       # TIER-0 fail-closed — never on spot. Requires a pool that offers
       # on-demand (the Karpenter apps pool allows both since this change);
