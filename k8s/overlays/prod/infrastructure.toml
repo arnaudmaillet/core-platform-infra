@@ -97,6 +97,18 @@ per_secs = 86400                    # 100 a day per caller
 burst    = 10
 scope    = "per_caller"
 
+# ClaimReward (backend #887): about 30 an hour per account. The claim itself pays
+# at most once an hour; this bounds the CALLS (each takes a Postgres row lock),
+# not the credits. Per replica (mode = local): N wallet replicas allow up to N×30.
+# Prod: SHADOW first (decisions only counted); enforce once
+# infra_traffic_throttled_total{profile="claim",status="shadow"} stays quiet.
+[traffic.profiles.claim]
+rps      = 30
+per_secs = 3600                     # 30 an hour per caller
+burst    = 5
+scope    = "per_caller"
+enforce  = false                    # shadow first in prod
+
 [traffic.edge_bindings]
 "/auth.v1.AuthService/StartGuestSession"   = "guest-start"
 "/auth.v1.AuthService/Login"               = "login"
@@ -111,6 +123,7 @@ scope    = "per_caller"
 "/auth.v1.AuthService/StartPasskeySignIn"     = "sign-up"
 "/auth.v1.AuthService/StartDeviceAttestation" = "guest-start"
 "/account.v1.AccountService/FindProfilesByContacts" = "contacts"
+"/wallet.v1.WalletService/ClaimReward"             = "claim"
 "/engagement.v1.EngagementService/RecordView"  = "counters"
 "/engagement.v1.EngagementService/RecordShare" = "counters"
 # Public reads (edge rule `public_read` in the backend's service.rs files).
