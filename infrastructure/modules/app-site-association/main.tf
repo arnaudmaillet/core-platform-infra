@@ -11,8 +11,8 @@
 # TTL here only bounds our edge.
 #
 # A private S3 bucket (Block Public Access on) behind CloudFront with Origin
-# Access Control, an ACM cert (us-east-1, DNS-validated in the domain's Route53
-# zone) and A/AAAA aliases on the apex. Every other path answers 403 (no web
+# Access Control, an ACM cert (us-east-1, DNS-validated through the record owned
+# by global/networking/acm-validation) and A/AAAA aliases on the apex. Every other path answers 403 (no web
 # fallback pages yet).
 
 data "aws_route53_zone" "this" {
@@ -82,27 +82,24 @@ resource "aws_acm_certificate" "site" {
   }
 }
 
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.site.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
+# The DNS validation CNAME is NOT owned here (core-platform-infra#80): it is the
+# same record for every cert of the account on this domain, owned only by
+# global/networking/acm-validation. This unit created it at first; `removed`
+# drops it from this state WITHOUT deleting the record. Keep the block until this
+# unit has been applied once with it (2026-10: applied with the record in state);
+# deleting it earlier would make Terraform destroy the shared record.
+removed {
+  from = aws_route53_record.cert_validation
 
-  allow_overwrite = true
-  zone_id         = data.aws_route53_zone.this.zone_id
-  name            = each.value.name
-  type            = each.value.type
-  ttl             = 60
-  records         = [each.value.record]
+  lifecycle {
+    destroy = false
+  }
 }
 
-# Blocks until the zone is delegated at the registrar (NS) and DNS resolves.
+# Waits on the validation record owned by global/networking/acm-validation.
 resource "aws_acm_certificate_validation" "site" {
   certificate_arn         = aws_acm_certificate.site.arn
-  validation_record_fqdns = [for r in aws_route53_record.cert_validation : r.fqdn]
+  validation_record_fqdns = [for dvo in aws_acm_certificate.site.domain_validation_options : trimsuffix(dvo.resource_record_name, ".")]
 }
 
 # ── CloudFront ────────────────────────────────────────────────────────────────

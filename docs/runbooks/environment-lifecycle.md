@@ -74,8 +74,10 @@ sequence:
 
 ```bash
 # 0. Account-global units, once per account (not torn down with the env):
-#    global/networking/route53 → global/messaging/{ses-identity,sms},
-#    global/web/app-site-association (+ artifacts/ecr).
+#    global/networking/route53 → global/networking/acm-validation (the sole
+#    owner of the ACM validation CNAME, before any acm-cert, #80) →
+#    global/messaging/{ses-identity,sms}, global/web/app-site-association
+#    (+ artifacts/ecr).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
 #    security/{irsa-roles,waf-edge} → networking/media-cdn → kubernetes/argocd).
 #    GITHUB_TOKEN is required —
