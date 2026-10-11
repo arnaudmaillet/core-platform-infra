@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./terragrunt-units.md
-  source_sha256: 91fb5ef517506de322bca6af68a9b54316f268caac7d99c20e3ee2a6e6d4ec82
+  source_sha256: 2025ed6d5e853841ee6c7d9d79ebce87662598548d48c5219f5380a60350e8ca
   translated_at: 2026-10-12
   status: complete
 ---
@@ -34,7 +34,7 @@ infrastructure/
 │   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   media-cdn   ses-identity   sms-guardrails   app-site-association   kubernetes/argocd
 └── live/                       # Terragrunt instantiations (the "where/which")
     ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr, messaging/{ses-identity,sms},
-    │          web/app-site-association}  # account-shared
+    │          networking/acm-validation, web/app-site-association}  # account-shared
     ├── dev/us-east-1/…
     ├── staging/us-east-1/…     # ◄── documented here (the live path)
     └── prod/us-east-1/…        # full staging mirror, prod posture (not applied)
@@ -159,6 +159,7 @@ BASE=infrastructure/live/staging/us-east-1
 ( cd infrastructure/live/global/artifacts/ecr && terragrunt apply )   # the authoritative ECR repo list
 ( cd infrastructure/live/global/messaging/ses-identity && terragrunt apply )   # SES domain identity (needs the route53 zone)
 ( cd infrastructure/live/global/messaging/sms && terragrunt apply )            # SMS guardrails (needs the AWS CLI v2)
+( cd infrastructure/live/global/networking/acm-validation && terragrunt apply )  # sole owner of the ACM validation CNAME (#80), before any acm-cert
 ( cd infrastructure/live/global/web/app-site-association && terragrunt apply )  # AASA on https://core-platform.click
 ```
 
@@ -217,7 +218,7 @@ le [runbook de reconstruction du staging jetable](../runbooks/staging-disposable
 | Module | Unités qui l'instancient |
 |---|---|
 | `networking/vpc` | `networking/vpc` |
-| `acm-cert` | `networking/acm-cert` |
+| `acm-cert` | `networking/acm-cert` (par env ; attend l'enregistrement de validation partagé) · `global/networking/acm-validation` (partagé au compte ; **seul** propriétaire du CNAME de validation DNS ACM, `manage_validation_records = true`, #80) |
 | `eks` | `eks` (staging, dev, prod) |
 | `msk` / `elasticache` / `opensearch` | `data/msk` · `data/elasticache` · `data/opensearch` |
 | `s3-bucket` (générique) | `data/media-bucket` (Lock off) · `data/audit-worm` (Lock : GOVERNANCE staging / COMPLIANCE prod) · `data/cnpg-backups` · `data/scylla-backups` · `data/gdpr-exports` (expiry 8 days) |

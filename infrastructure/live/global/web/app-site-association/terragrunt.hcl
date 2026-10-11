@@ -15,11 +15,8 @@
 # https://core-platform.click must join it (an extra origin / behaviours), not
 # take the apex over, or the AASA disappears.
 #
-# KNOWN RISK (core-platform-infra#80): the apex cert's DNS validation CNAME is
-# the same record the per-env networking/acm-cert units create; a staging
-# teardown deletes it and this cert can then no longer auto-renew. Until #80
-# moves those records to a single owner, re-apply this unit after a staging
-# teardown.
+# The apex cert's DNS validation CNAME is owned by global/networking/acm-validation
+# (core-platform-infra#80), applied first.
 #
 # Check after apply:
 #   curl -sI https://core-platform.click/.well-known/apple-app-site-association
@@ -33,9 +30,15 @@ terraform {
   source = "../../../../modules/app-site-association"
 }
 
-# Ordering only (the zone is read by name).
+# Ordering only (the zone is read by name; the validation record is owned by
+# acm-validation).
 dependency "zone" {
   config_path  = "../../networking/route53"
+  skip_outputs = true
+}
+
+dependency "acm_validation" {
+  config_path  = "../../networking/acm-validation"
   skip_outputs = true
 }
 
