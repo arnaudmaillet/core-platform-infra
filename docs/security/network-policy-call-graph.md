@@ -205,28 +205,34 @@ this decision only concerns the remaining client-facing set.
 
 ## 4. Kafka event plane (egress to MSK, not pod→pod)
 
-From `EVENT_CATALOG.md` — these are producer→consumer over MSK, so they are
-**egress to the broker ENIs**, never pod-to-pod ingress. They do NOT need ingress
-allows; they inform the **egress** policy (who needs MSK :9096).
+Source of truth: the backend's generated `docs/domain/EVENT_CATALOG.md` (from the
+`event-topology` registry); this table mirrors it as of backend develop after
+#896 (`post.published` / `post.updated` retired) and #861 (`engagement.reactions`
+retired, likes are wallet stakes). These are producer→consumer over MSK, so they
+are **egress to the broker ENIs**, never pod-to-pod ingress. They do NOT need
+ingress allows; they inform the **egress** policy (who needs MSK :9096).
 
 | Topic | Producer | Consumers |
 |---|---|---|
-| `account.v1.events` | account | audit, profile |
-| `profile.v1.events` | profile | search, post, social-graph |
-| `post.v1.events` | post | timeline, search, realtime |
-| `post.published` / `post.deleted` | post | geo-discovery, notification / timeline, geo-discovery |
+| `account.v1.events` | account | audit, auth, profile, media, wallet, notification, engagement |
+| `profile.v1.events` | profile | search, post, social-graph, geo-discovery, timeline, media, engagement, comment, chat |
+| `wallet.v1.events` | wallet | counter, notification, timeline, geo-discovery, engagement |
+| `notification.v1.events` | notification | realtime |
+| `post.v1.events` | post | timeline, search, realtime, notification, geo-discovery |
+| `post.deleted` (legacy) | post | timeline, geo-discovery |
 | `comment.created` / `comment.deleted` | comment | notification, engagement / engagement |
-| `engagement.reactions` | engagement | counter, notification, engagement |
-| `social-graph.*` (followed/unfollowed/tier) | social-graph | timeline, profile |
-| `counter.v1.popularity` | counter | realtime, geo-discovery |
-| `moderation.v1.events` | moderation | audit, search, media, post, geo-discovery |
+| `social-graph.followed` / `.unfollowed` / `.follow_requested` / `.author_tier_changed` | social-graph | notification, timeline / timeline / notification / profile |
+| `counter.v1.popularity` | counter | realtime, geo-discovery, timeline |
+| `moderation.v1.events` | moderation | audit, search, media, post, geo-discovery, timeline, notification |
 | `auth.v1.events` | auth | audit |
 | `media.v1.events` | media | media |
-| `chat.*` | chat | chat (rest orphan) |
+| `audit.v1.events` | media | audit |
+| `chat.*` | chat | chat; `chat.message.push` → notification (`chat.conversation.published` orphan) |
 
 **MSK producers/consumers** (need egress :9096): account, profile, post, comment,
 engagement, social-graph, counter (+worker), moderation, auth, media (+worker), chat,
-geo-discovery, notification, timeline, search, realtime (+dispatcher), audit (+worker).
+geo-discovery, notification, timeline, search, realtime (+dispatcher), audit (+worker),
+wallet.
 (≈ everyone except the pure read paths.)
 
 ---

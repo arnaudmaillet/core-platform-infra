@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: 12a4474c223b2973b5ee1a4b58afc95391b05b0e6df5c574881ade3bbe2a4632
+  source_sha256: c7129145c66b5d27fd707955d13ab8fbbeb80e3496cc7fbf547bd1b269a3cd83
   translated_at: 2026-10-11
   status: complete
 ---
@@ -148,6 +148,11 @@ défaillance) :**
   pour que le selfHeal d'ArgoCD ne réinitialise jamais ce que l'autoscaler a fixé.
   Un nouveau Deployment démarre à 1 réplica et le HPA le monte à `minReplicas` en
   quelques secondes. Gardez cette règle en ajoutant un HPA.
+  Sur un cluster qui tourne déjà avec les anciens manifests, la première synchro
+  sans `spec.replicas` peut brièvement le ramener à 1 (le server-side apply rend
+  le champ) avant que le HPA/KEDA ne restaure `minReplicas` : un court creux, qui
+  compte pour les tier-0 auth/moderation/audit. Synchronisez ce changement dans
+  une fenêtre calme.
 - **wallet-server (nouveau service, core-platform-infra#41) :**
   - `global/artifacts/ecr` doit avoir créé `core-platform-wallet-server`, et le
     backend doit avoir ajouté `wallet-server` à `FLEET_BINS`, avec un pin arrivé

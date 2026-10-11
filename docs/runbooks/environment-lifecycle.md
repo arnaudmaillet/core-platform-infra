@@ -125,6 +125,10 @@ kubectl apply -k k8s/base/infra/scylla-cluster
   KEDA ScaledObject carry no `spec.replicas`, so ArgoCD's selfHeal never resets
   what the autoscaler set. A new Deployment starts at 1 replica and the HPA raises
   it to `minReplicas` within seconds. Keep it that way when adding an HPA.
+  On a cluster that already runs the old manifests, the first sync without
+  `spec.replicas` can briefly reset it to 1 (server-side apply hands the field
+  back) before the HPA/KEDA restores `minReplicas`: a short dip, which matters
+  for tier-0 auth/moderation/audit. Sync that change in a quiet window.
 - **wallet-server (new service, core-platform-infra#41):**
   - `global/artifacts/ecr` must have created `core-platform-wallet-server`, and the
     backend must have added `wallet-server` to `FLEET_BINS` with a pin landed since.
