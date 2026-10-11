@@ -201,6 +201,12 @@ patches:
     target:
       kind: Deployment
       labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server,wallet-server)"
+  # Edge-token revocation check (#73): every edge-token verifier reads auth's
+  # Redis. The client-edge servers plus the two verifiers outside that set.
+  - path: patch-edge-revocation-env.yaml
+    target:
+      kind: Deployment
+      labelSelector: "app in (account-server,auth-server,chat-server,comment-server,counter-server,engagement-server,geo-discovery-server,media-server,moderation-server,notification-server,post-server,profile-server,search-server,social-graph-server,timeline-server,wallet-server,realtime-gateway,audit-server)"
   - path: patch-client-edge-service-port.yaml
     target:
       kind: Service
