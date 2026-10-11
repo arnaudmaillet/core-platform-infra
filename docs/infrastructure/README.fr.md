@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./README.md
-  source_sha256: 364432b555a8775231f084a7ddcb8eff2ab78e9e3d5e6b74a5f3b999f955f6f0
-  translated_at: 2026-10-10
+  source_sha256: 97c7e04613a4b54e8797e6b4ca2390a34bae748de5a34c3f3b22337883753675
+  translated_at: 2026-10-11
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`README.md`](./README.md) fait foi.
@@ -106,12 +106,12 @@ Extraite du registre `event-topology` (la source de vérité imposée à la comp
 
 - **Ingestion de conformité (TIER-0) :** `account.v1.events`, `auth.v1.events`, `moderation.v1.events` → **`audit`**. Audit est un puits terminal ; il auto-consomme aussi une voie d'ingestion générique `audit.v1.events` alimentée par le chemin gRPC synchrone `RecordPrivileged`.
 - **Modèle de lecture de découverte :** `profile.v1.events` + `post.v1.events` + `moderation.v1.events` → **`search`** (index + visibilité).
-- **Engagement → magnitudes :** `engagement.reactions` → **`counter`** (agrégation), `notification`, soi-même (write-behind). Counter consomme aussi de la télémétrie amont différée (`view/impression/click.v1.events`).
+- **Likes → magnitudes :** les likes sont des mises du wallet (backend #665) : `wallet.v1.events` → **`counter`** (agrégation, groupe `counter-stake-aggregator`), `notification`, `timeline`, `geo-discovery`, `engagement`. `engagement.reactions` est retiré (#861). Counter consomme aussi de la télémétrie amont différée (`view/impression/click.v1.events`).
 - **Counter → temps réel + viralité :** `counter.v1.popularity` → **`realtime`** (diffusion) + **`geo-discovery`** (re-scoring).
 - **Diffusion sociale :** `social-graph.followed/unfollowed` → **`timeline`** ; `social-graph.author_tier_changed` → **`profile`** (propriété du niveau).
 - **Push temps réel :** `post.v1.events` → **`realtime`** ; `media.v1.events` auto-consommé (transformation Plan-B) ; `moderation.v1.events` → **`media`** (retrait).
 
-Le registre suit aussi formellement les consommateurs **DIFFÉRÉS** (producteurs externes/non construits : `moderation.reports/signals`, `view/impression/click.v1.events`, le décalage de nommage `social-graph.follows`) et les **PRODUCTEURS ORPHELINS** (marge intentionnelle : `post.updated` historique, `social-graph.blocked` imposé sur le chemin de lecture, les topics du plan de livraison de chat). À noter : le registre garantit le **câblage** des topics, pas la **forme** des charges utiles — un écart connu de charge utile `post → geo/notification` demeure une préoccupation distincte et suivie.
+Le registre suit aussi formellement les consommateurs **DIFFÉRÉS** (producteurs externes/non construits : `moderation.reports/signals`, `view/impression/click.v1.events`, le décalage de nommage `social-graph.follows`) et les **PRODUCTEURS ORPHELINS** (marge intentionnelle : `social-graph.blocked` imposé sur le chemin de lecture, `chat.conversation.published`). À noter : le registre garantit le **câblage** des topics, pas la **forme** des charges utiles. L'ancien écart de charge utile `post → geo/notification` est résolu : depuis le backend #896, tout consommateur de `post` lit `post.v1.events`, et `post.published` / `post.updated` sont retirés.
 
 Le registre est aussi la **source de provisionnement des brokers** : le binaire `topic-provisioner` (Job hook PreSync ArgoCD dans chaque overlay) crée chaque topic de flux plus son homologue `.dlq` en un seul appel admin idempotent. MSK tourne avec `auto.create.topics.enable=false` (propriété serveur explicite), donc un topic existe **parce qu'il** figure dans le registre — un nom de topic mal orthographié fait échouer la synchronisation au lieu d'engendrer un topic fantôme avec des défauts que personne n'a choisis.
 
@@ -187,4 +187,4 @@ Les substituts d'endpoint (`<<…>>`) sont remplacés à partir des sorties Terr
 
 ## Annexe B — Catalogue des topics
 
-**Producteurs :** `account.v1.events`, `profile.v1.events`, `post.{published,updated,deleted,v1.events}`, `comment.{created,deleted}`, `engagement.reactions`, `social-graph.{followed,unfollowed,blocked,author_tier_changed}`, `chat.*`, `counter.v1.popularity`, `moderation.v1.events`, `auth.v1.events`, `media.v1.events`. **Consommateurs différés :** `audit.v1.events`, `moderation.{reports,signals}`, `view/impression/click.v1.events`, `social-graph.follows`. **Producteurs orphelins (marge) :** `post.updated`, `social-graph.blocked`, `chat.{conversation.created,conversation.published,member.joined,member.left,message.sent}`.
+**Producteurs :** `account.v1.events`, `profile.v1.events`, `wallet.v1.events`, `notification.v1.events`, `post.{deleted,v1.events}`, `comment.{created,deleted}`, `social-graph.{followed,unfollowed,blocked,author_tier_changed,follow_requested}`, `chat.*`, `counter.v1.popularity`, `moderation.v1.events`, `auth.v1.events`, `media.v1.events`, `audit.v1.events`. Le `docs/domain/EVENT_CATALOG.md` généré du backend fait foi. **Consommateurs différés :** `moderation.{reports,signals}`, `view/impression/click.v1.events`, `social-graph.follows`. **Producteurs orphelins (marge) :** `social-graph.blocked`, `chat.conversation.published`.
