@@ -5,3 +5,11 @@ resources:
   - deployment.yaml
   - service.yaml
   - pdb.yaml
+# Client-edge server (also listens on :9443 behind the ALB) and edge-token
+# verifier: the overlays' edge patches and the allow-client-edge NetworkPolicy
+# select on these labels, so this is the one place that lists the edge set.
+labels:
+  - pairs:
+      client-edge: "true"
+      edge-token-verifier: "true"
+    includeTemplates: true

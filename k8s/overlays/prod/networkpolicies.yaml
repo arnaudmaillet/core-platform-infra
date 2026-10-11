@@ -104,27 +104,11 @@ kind: NetworkPolicy
 metadata:
   name: allow-client-edge
 spec:
+  # The label is set in each client-facing server's base kustomization.yaml, the
+  # single list of the edge set (the overlays' edge patches select on it too).
   podSelector:
-    matchExpressions:
-      - key: app
-        operator: In
-        values:
-          - account-server
-          - auth-server
-          - chat-server
-          - comment-server
-          - counter-server
-          - engagement-server
-          - geo-discovery-server
-          - media-server
-          - moderation-server
-          - notification-server
-          - post-server
-          - profile-server
-          - search-server
-          - social-graph-server
-          - timeline-server
-          - wallet-server
+    matchLabels:
+      client-edge: "true"
   policyTypes: [Ingress]
   ingress:
     - from:

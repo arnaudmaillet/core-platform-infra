@@ -158,7 +158,12 @@ by `transport::grpc::edge`:
 The **mesh listener** (`<SVC>_GRPC_ADDR`) is unchanged: no token, NetworkPolicy
 scoped as before. NetworkPolicy opens **:9443 only** to the ALB (`allow-client-edge`,
 `ipBlock 0.0.0.0/0` like the WSS rule — the ALB ENIs are not pods); the mesh ports
-are not reachable from it.
+are not reachable from it. The rule selects pods labelled `client-edge: "true"`,
+set in each client-facing server's base `kustomization.yaml` together with
+`edge-token-verifier: "true"`. The overlays' edge patches (the `:9443` listener
+env and Service port, plus the revocation env) select on the same labels;
+`realtime-gateway` and `audit-server` carry only `edge-token-verifier`. A new
+client-facing server adds that `labels:` stanza; nothing else lists the set.
 
 Why a second listener rather than one port with a "trusted internal caller"
 bypass: the six mesh edges carry no user token (`search → post`, `timeline →

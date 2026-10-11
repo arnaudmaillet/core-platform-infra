@@ -6,3 +6,9 @@ resources:
   - service.yaml
   - hpa.yaml
   - pdb.yaml
+# Edge-token verifier (not client-edge): the overlays' revocation patch selects
+# on this label.
+labels:
+  - pairs:
+      edge-token-verifier: "true"
+    includeTemplates: true
