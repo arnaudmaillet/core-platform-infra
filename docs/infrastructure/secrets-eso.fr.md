@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./secrets-eso.md
-  source_sha256: 015163e1c722460de98538611029dbf1e31ae09a378f99e5635908b7b1f95f90
-  translated_at: 2026-10-09
+  source_sha256: 6eae8481d93362142f247db280be012fe5f3ae48afa78fa5dd356e0123cfb7b3
+  translated_at: 2026-10-11
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`secrets-eso.md`](./secrets-eso.md) fait foi.
@@ -123,7 +123,7 @@ seedées sont le travail de l'unité `data/app-secrets`. Voir la
 
 | ExternalSecret → k8s Secret | Consommé par | Clés (env var ← propriété SM) |
 |---|---|---|
-| **`backend-creds`** (`envFrom` de toute la flotte) | tout service touchant Kafka/Redis | `KAFKA_SASL_USERNAME/PASSWORD` ← secret app MSK ; `REDIS_PASSWORD` ← redis-auth |
+| **`backend-creds`** (`envFrom` de toute la flotte) | tout service touchant Kafka/Redis | `KAFKA_SASL_USERNAME/PASSWORD` ← secret app MSK ; `REDIS_PASSWORD` ← redis-auth ; le même `REDIS_PASSWORD` alimente aussi `EDGE_REVOCATION_REDIS_PASSWORD` sur chaque vérificateur de tokens edge (état de révocation d'auth, #73) |
 | **`search-creds`** | `search` seulement | `SEARCH_OPENSEARCH_USER/PASSWORD` ← opensearch-master |
 | **`media-s3-creds`** | `media` seulement | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
 | **`audit-crypto`** | `audit` seulement | clés object+witness access/secret, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |

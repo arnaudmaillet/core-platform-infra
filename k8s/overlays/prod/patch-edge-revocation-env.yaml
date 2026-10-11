@@ -1,0 +1,39 @@
+# k8s/overlays/prod/patch-edge-revocation-env.yaml
+#
+# Edge-token REVOCATION (core-platform-infra#73; backend #884 via #904, #903 via
+# #905): every verifier of auth's edge tokens reads auth's revocation state
+# (auth:{acct:<id>}:gen, auth:{sess:<id>}:revoked) from auth's Redis, so a
+# signed-out / stolen / suspended token stops working within ~5 s
+# (EDGE_REVOCATION_CACHE_MS) instead of at exp (up to 10 min).
+# Same connection as auth's own REDIS_* (auth.env): the ElastiCache cluster,
+# TLS, the AUTH token from `backend-creds`. ElastiCache's security group admits
+# the whole VPC CIDR, so pods without a Redis of their own reach it too.
+# Targets (kustomization.yaml): the 16 client-edge servers, realtime-gateway
+# (handshake + heartbeat re-check, fail open) and audit-server (caller gate,
+# fail closed). Posture: auth/moderation and staff calls fail closed (an
+# unreadable state answers UNAVAILABLE), the rest fail open until exp with a
+# warning; watch infra_edge_rejected_total{reason="revocation_unavailable"}.
+# Unset = no check (the pre-#904 behaviour).
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: EDGE_REVOCATION_REDIS_HOSTS
+    value: "${ELASTICACHE_CONFIG_ENDPOINT}:6379"
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: EDGE_REVOCATION_REDIS_TOPOLOGY
+    value: "cluster"
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: EDGE_REVOCATION_REDIS_TLS
+    value: "true"
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: EDGE_REVOCATION_REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: backend-creds
+        key: REDIS_PASSWORD

@@ -266,6 +266,12 @@ lockdown must keep these open from `auth-server`, or sign-up and sign-in break:
 - one-time SMS codes (SNS), **:443**: `sns.us-east-1.amazonaws.com`. A VPC
   interface endpoint for SNS keeps it private.
 
+**Edge-token verifiers → auth's Redis** (#73): the 16 client-edge servers,
+`realtime-gateway` and `audit-server` read auth's revocation state from the
+ElastiCache cluster (`EDGE_REVOCATION_REDIS_*`, `patch-edge-revocation-env.yaml`),
+so all of them need **:6379 to the private-data subnet CIDRs**, including the
+ones that have no Redis of their own (account, comment, post, search, wallet).
+
 **Gated mesh callees' API-server egress** (#62): `moderation-server` and
 `wallet-server` fetch the cluster's JWKS from `kubernetes.default.svc:443`
 (the API server). The lockdown must keep that open for them, or the verifier

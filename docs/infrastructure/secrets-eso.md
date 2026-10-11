@@ -108,7 +108,7 @@ job. See the [Terragrunt units reference](terragrunt-units.md#data-plane-managed
 
 | ExternalSecret → k8s Secret | Consumed by | Keys (env var ← SM property) |
 |---|---|---|
-| **`backend-creds`** (fleet-wide `envFrom`) | every service touching Kafka/Redis | `KAFKA_SASL_USERNAME/PASSWORD` ← MSK app secret; `REDIS_PASSWORD` ← redis-auth |
+| **`backend-creds`** (fleet-wide `envFrom`) | every service touching Kafka/Redis | `KAFKA_SASL_USERNAME/PASSWORD` ← MSK app secret; `REDIS_PASSWORD` ← redis-auth; the same `REDIS_PASSWORD` also feeds `EDGE_REVOCATION_REDIS_PASSWORD` on every edge-token verifier (auth's revocation state, #73) |
 | **`search-creds`** | `search` only | `SEARCH_OPENSEARCH_USER/PASSWORD` ← opensearch-master |
 | **`media-s3-creds`** | `media` only | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
 | **`audit-crypto`** | `audit` only | object+witness access/secret keys, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
