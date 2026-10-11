@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./terragrunt-units.md
-  source_sha256: faf984a88f912d92ac27a251b21eef3d7a0e24d6b95d69e28ede8116a9d03579
-  translated_at: 2026-10-09
+  source_sha256: 91fb5ef517506de322bca6af68a9b54316f268caac7d99c20e3ee2a6e6d4ec82
+  translated_at: 2026-10-12
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`terragrunt-units.md`](./terragrunt-units.md) fait foi.
@@ -34,7 +34,7 @@ infrastructure/
 │   ├── kms-key   app-secrets   security/{irsa-roles,account-slr}   waf-edge   media-cdn   ses-identity   sms-guardrails   app-site-association   kubernetes/argocd
 └── live/                       # Terragrunt instantiations (the "where/which")
     ├── global/{artifacts/ecr, networking/route53, security/ec2-spot-slr, messaging/{ses-identity,sms},
-    │          networking/route53-wynn-cn, web/wynn-cn-aasa}  # account-shared
+    │          web/app-site-association}  # account-shared
     ├── dev/us-east-1/…
     ├── staging/us-east-1/…     # ◄── documented here (the live path)
     └── prod/us-east-1/…        # full staging mirror, prod posture (not applied)
@@ -159,8 +159,7 @@ BASE=infrastructure/live/staging/us-east-1
 ( cd infrastructure/live/global/artifacts/ecr && terragrunt apply )   # the authoritative ECR repo list
 ( cd infrastructure/live/global/messaging/ses-identity && terragrunt apply )   # SES domain identity (needs the route53 zone)
 ( cd infrastructure/live/global/messaging/sms && terragrunt apply )            # SMS guardrails (needs the AWS CLI v2)
-( cd infrastructure/live/global/networking/route53-wynn-cn && terragrunt apply )  # wynn.cn zone, then delegate its NS at the registrar
-( cd infrastructure/live/global/web/wynn-cn-aasa && terragrunt apply )          # AASA on https://wynn.cn (after the delegation)
+( cd infrastructure/live/global/web/app-site-association && terragrunt apply )  # AASA on https://core-platform.click
 ```
 
 > **Fiez-vous au Run Summary, pas au code de sortie.** `terragrunt run-all` /
@@ -229,8 +228,8 @@ le [runbook de reconstruction du staging jetable](../runbooks/staging-disposable
 | `media-cdn` | `networking/media-cdn` (staging, prod) |
 | `kubernetes/argocd` | `kubernetes/argocd` |
 | `artifacts/ecr` | `global/artifacts/ecr` (partagé au compte) |
-| `networking/route53` | `global/networking/route53` (partagé au compte) · `global/networking/route53-wynn-cn` (le domaine web de l'app iOS) |
-| `app-site-association` | `global/web/wynn-cn-aasa` (partagé au compte ; apple-app-site-association sur `https://wynn.cn` : liens universels + webcredentials des passkeys, S3 + CloudFront OAC + ACM) |
+| `networking/route53` | `global/networking/route53` (partagé au compte) |
+| `app-site-association` | `global/web/app-site-association` (partagé au compte ; apple-app-site-association sur `https://core-platform.click` : liens universels + webcredentials des passkeys, S3 + CloudFront OAC + ACM) |
 | `ses-identity` | `global/messaging/ses-identity` (partagé au compte ; identité de domaine SES `core-platform.click` : Easy DKIM, MAIL FROM `mail.`, SPF, DMARC, liste de suppression. Les utilisateurs SMTP par env sont dans `app-secrets`) |
 | `sms-guardrails` | `global/messaging/sms` (partagé au compte ; préférences SMS SNS : plafond de dépenses, Transactional, logs de statut de livraison ; alarmes de dépenses → `core-platform-ops-alerts` ; liste de pays autorisés = protect configuration par défaut du compte via `scripts/sms-protect.sh`. Les utilisateurs SNS par env sont dans `app-secrets`) |
 | `security/account-slr` | `global/security/ec2-spot-slr` (partagé au compte ; rôle lié au service EC2 Spot — global au compte, sûr à la destruction, autrefois par-env dans `irsa-roles`) |

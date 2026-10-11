@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: c7129145c66b5d27fd707955d13ab8fbbeb80e3496cc7fbf547bd1b269a3cd83
-  translated_at: 2026-10-11
+  source_sha256: ebe98038340c31c6829249b49762c34eb808ef1e38ccfdb4943cc219f0797abf
+  translated_at: 2026-10-12
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`environment-lifecycle.md`](./environment-lifecycle.md) fait foi.
@@ -90,9 +90,8 @@ La séquence au niveau boucle :
 
 ```bash
 # 0. Account-global units, once per account (not torn down with the env):
-#    global/networking/route53 → global/messaging/{ses-identity,sms} (+ artifacts/ecr);
-#    global/networking/route53-wynn-cn → delegate wynn.cn's NS at the registrar →
-#    global/web/wynn-cn-aasa (its ACM validation waits on the delegation).
+#    global/networking/route53 → global/messaging/{ses-identity,sms},
+#    global/web/app-site-association (+ artifacts/ecr).
 # 1. Terraform: whole tree, in dependency order (vpc → eks → data/* →
 #    security/{irsa-roles,waf-edge} → networking/media-cdn → kubernetes/argocd).
 #    GITHUB_TOKEN is required —

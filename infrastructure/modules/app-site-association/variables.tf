@@ -2,7 +2,7 @@
 
 variable "domain_name" {
   type        = string
-  description = "The app's web domain (e.g. wynn.cn): serves https://<domain>/.well-known/apple-app-site-association. Must be the name of a public Route53 zone in this account, already DELEGATED at the registrar (the ACM DNS validation waits on it)."
+  description = "The app's web domain (e.g. core-platform.click): serves https://<domain>/.well-known/apple-app-site-association. Must be the name of a public Route53 zone in this account, already DELEGATED at the registrar (the ACM DNS validation waits on it)."
 }
 
 variable "app_ids" {
