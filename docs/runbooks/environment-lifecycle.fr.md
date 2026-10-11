@@ -1,7 +1,7 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: ebe98038340c31c6829249b49762c34eb808ef1e38ccfdb4943cc219f0797abf
+  source_sha256: 1fc5a8ea67c21380d5d89dc2f93b6fe158b91a775c7d35c4611de6b208622845
   translated_at: 2026-10-12
   status: complete
 ---
@@ -215,9 +215,8 @@ kubectl get scyllaclusters.scylla.scylladb.com -A
 **Dégradations connues et attendues (pas des échecs) :**
 
 - Le plan WSS de `realtime` échoue en fail-closed (`RTM-1001`) jusqu'à ce que le JWKS
-  de `auth` soit joignable — Keycloak est **DEFERRED**, donc c'est attendu. Le plan de
-  santé gRPC n'est pas affecté, donc le pod devient quand même Ready.
-- `AUTH_KEYCLOAK_CLIENT_SECRET` est un placeholder jusqu'à ce que Keycloak atterrisse.
+  de `auth` soit joignable, c'est-à-dire jusqu'à ce qu'auth-server soit démarré. Le
+  plan de santé gRPC n'est pas affecté, donc le pod devient quand même Ready.
 
 Si un endpoint placeholder a fuité dans un pod (littéral
 `${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}`), corrigez selon le

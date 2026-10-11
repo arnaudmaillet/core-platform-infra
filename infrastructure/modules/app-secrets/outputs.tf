@@ -41,6 +41,6 @@ output "notification_apns_secret_arn" {
 }
 
 output "auth_secrets_secret_arn" {
-  description = "ARN of the auth signing/Keycloak secret."
+  description = "ARN of the auth ES256 signing-key secret."
   value       = aws_secretsmanager_secret.auth_secrets.arn
 }

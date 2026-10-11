@@ -36,17 +36,7 @@ variable "opensearch_endpoint" {
 variable "auth_jwks_url" {
   type        = string
   default     = ""
-  description = "Auth JWKS URL (CMP var AUTH_JWKS_URL; empty until Keycloak/auth is provisioned)."
-}
-variable "keycloak_token_endpoint" {
-  type        = string
-  default     = ""
-  description = "Keycloak token endpoint (CMP var KEYCLOAK_TOKEN_ENDPOINT; empty until provisioned)."
-}
-variable "keycloak_admin_url" {
-  type        = string
-  default     = ""
-  description = "Keycloak realm Admin API base, .../admin/realms/<realm> (CMP var KEYCLOAK_ADMIN_URL; empty = auth credential-management RPCs answer UNAVAILABLE)."
+  description = "Auth JWKS URL (CMP var AUTH_JWKS_URL: auth's own JWKS)."
 }
 variable "waf_edge_acl_arn" {
   type        = string

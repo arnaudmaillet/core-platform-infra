@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./secrets-eso.md
-  source_sha256: 6eae8481d93362142f247db280be012fe5f3ae48afa78fa5dd356e0123cfb7b3
-  translated_at: 2026-10-11
+  source_sha256: a2ad4355c19da718b96e04150d62817782f1ce04dcd0e47350c71ffa44ba6335
+  translated_at: 2026-10-12
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`secrets-eso.md`](./secrets-eso.md) fait foi.
@@ -127,20 +127,11 @@ seedées sont le travail de l'unité `data/app-secrets`. Voir la
 | **`search-creds`** | `search` seulement | `SEARCH_OPENSEARCH_USER/PASSWORD` ← opensearch-master |
 | **`media-s3-creds`** | `media` seulement | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
 | **`audit-crypto`** | `audit` seulement | clés object+witness access/secret, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
-| **`auth-secrets`** | `auth` seulement | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM`, `AUTH_KEYCLOAK_CLIENT_SECRET` (← `keycloak_client_secret`), `AUTH_KEYCLOAK_ADMIN_CLIENT_SECRET` (← `keycloak_admin_client_secret`) ← auth-secrets |
+| **`auth-secrets`** | `auth` seulement | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM` ← auth-secrets |
 | **`auth-smtp`** | `auth` seulement, monté en **`optional`** (un secret SMTP absent ne doit pas empêcher auth de démarrer) | `AUTH_SMTP_USERNAME/PASSWORD` ← auth-smtp (id de clé d'un utilisateur IAM + mot de passe SMTP SES dérivé, autorisé à envoyer uniquement en tant que `no-reply@core-platform.click`) |
 | **`auth-sns`** | `auth` seulement, monté en **`optional`** | `AUTH_SNS_ACCESS_KEY_ID/SECRET_ACCESS_KEY` ← auth-sns (un utilisateur IAM autorisé à `sns:Publish` vers des numéros de téléphone uniquement ; freins SMS au niveau du compte dans `global/messaging/sms`) |
 | **`auth-mfa`** | `auth` seulement, monté en **`optional`** | `AUTH_MFA_SEED_KEY` (32 octets, base64) / `AUTH_MFA_SEED_KEY_ID` ← auth-mfa. Chiffre chaque graine TOTP : **ne jamais la supprimer ni la régénérer dès qu'un compte s'est inscrit** (prod : `prevent_destroy`) |
 | **`account-exports`** | `account` seulement, monté en **`optional`** | `ACCOUNT_EXPORT_S3_ACCESS_KEY/SECRET_KEY` ← account-exports (un utilisateur IAM limité au préfixe `exports/` du bucket d'export RGPD) |
-
-> **Hors de l'overlay de la flotte :** l'app plateforme `keycloak` (ns `keycloak`)
-> porte son propre ExternalSecret **`keycloak-secrets`** : `KC_BOOTSTRAP_ADMIN_PASSWORD`
-> ← keycloak (`admin_password`), et `KC_AUTH_CLIENT_SECRET` / `KC_AUTH_ADMIN_CLIENT_SECRET`
-> ← les **mêmes** propriétés d'auth-secrets (`keycloak_client_secret` /
-> `keycloak_admin_client_secret`). Son init container `render-realm` les estampille
-> dans les clients `core-platform-auth` (broker de login) et `core-platform-auth-admin`
-> (service account de l'Admin API : changements de mot de passe) du realm importé ;
-> auth et Keycloak partagent donc toujours une seule valeur générée par client.
 
 Deux conventions qui font trébucher :
 
@@ -262,8 +253,7 @@ kubectl -n external-secrets logs deploy/external-secrets | tail -50
 | `ExternalSecret` `SecretSyncedError`, `AccessDenied` | Le rôle IRSA d'ESO ne peut pas lire la clé SM (mauvais préfixe / policy) | Confirmez que la clé est sous `core-platform-staging-*` ; sinon élargissez la policy `external_secrets`. |
 | `SecretSyncedError`, `ResourceNotFoundException` | L'entrée SM n'existe pas (secret seedé jamais provisionné) | Appliquez `data/app-secrets` ; vérifiez que les noms de propriété correspondent. |
 | `SecretSyncedError`, `PendingDeletion` après une reconstruction | Nom SM réservé par un démontage précédent | Lancez `preflight-clean-env.sh staging --fix`, attendez, réappliquez — voir le [runbook de cycle de vie](../runbooks/environment-lifecycle.md). |
-| L'env du pod a la variable mais valeur erronée/vide | Nom de `property` incorrect, ou valeur SM seedée à vide (p. ex. placeholder Keycloak) | Corrigez le `remoteRef.property` ; notez que `AUTH_KEYCLOAK_CLIENT_SECRET` est un **placeholder** jusqu'à Keycloak (DEFERRED). |
-| auth reçoit `unauthorized_client` / `invalid_client` de Keycloak (login, ou `ChangePassword`/`VerifyCredentials` → client admin) | Le realm a été importé **avant** que ce client (ou ce secret) n'existe — `--import-realm` n'écrase jamais un realm existant | Ajoutez le client une fois à la main (console Admin / `kcadm.sh`) avec le secret de `…-auth-secrets` ; pour `core-platform-auth-admin`, accordez aussi à son utilisateur service-account `realm-management` `view-users` + `manage-users`. |
+| L'env du pod a la variable mais valeur erronée/vide | Nom de `property` incorrect, ou valeur SM seedée à vide | Corrigez le `remoteRef.property` ; vérifiez la valeur SM (`aws secretsmanager get-secret-value`). |
 | Store `ValidationFailed`, `serviceAccountRef` rejeté | Quelqu'un l'a changé en `SecretStore` namespacé | Ce doit être un `ClusterSecretStore` (§2). |
 
 ---

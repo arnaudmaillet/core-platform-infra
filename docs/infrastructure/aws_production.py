@@ -11,9 +11,6 @@ from diagrams.onprem.queue import Kafka
 from diagrams.onprem.monitoring import Prometheus
 from diagrams.onprem.gitops import Argocd
 from diagrams.onprem.inmemory import Redis
-from diagrams.custom import Custom
-
-keycloak_icon_path = "docs/icons/keycloak_icon.png"
 
 graph_attr = {
     "fontsize": "30",
@@ -24,7 +21,6 @@ graph_attr = {
 }
 
 BASE_DIR = os.getcwd() 
-keycloak_icon_path = os.path.join(BASE_DIR, "docs/icons/keycloak_icon.png")
 
 with Diagram(
     "Social Network Global Architecture", 
@@ -64,6 +60,8 @@ with Diagram(
                     row1 = [EKS("Account"), EKS("Profile"), EKS("Social Graph")]
                     row2 = [EKS("Post"), EKS("Comment"), EKS("Engagement")]
                     row3 = [EKS("Feed"), EKS("Notif"), EKS("Media Svc")]
+                    # Passwordless identity (Apple / Google, codes, passkeys).
+                    auth = EKS("Auth")
 
             # WORKERS (Définit ici pour corriger l'erreur)
             with Cluster("NodePool: Workers"):
@@ -73,7 +71,6 @@ with Diagram(
             with Cluster("NodePool: Storage"):
                 pg_cluster = PostgreSQL("Postgres")
                 scylla_cluster = Scylla("ScyllaDB")
-                keycloak = Custom("Keycloak IAM", keycloak_icon_path)
                 kafka_bus = Kafka("Kafka")
                 redis_session = Redis("Redis (Sessions)")
                 redis_data = Redis("Redis (Services)")
@@ -103,8 +100,8 @@ with Diagram(
     
     # 2. Authentification & BFF
     ingress >> user_f >> [api_bff, live_bff]
-    [api_bff, live_bff] >> user_f >> keycloak
-    keycloak >> data_f >> pg_cluster
+    [api_bff, live_bff] >> user_f >> auth
+    auth >> data_f >> pg_cluster
     [api_bff, live_bff] >> data_f >> redis_session
     
     # 3. API Internes

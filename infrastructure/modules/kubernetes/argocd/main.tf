@@ -33,13 +33,11 @@ module "bootstrap" {
   server_dependency   = module.server.argocd_id
 
   # CMP envsubst values (data-store endpoints) for the workload overlay render.
-  msk_bootstrap_brokers   = var.msk_bootstrap_brokers
-  elasticache_endpoint    = var.elasticache_endpoint
-  opensearch_endpoint     = var.opensearch_endpoint
-  auth_jwks_url           = var.auth_jwks_url
-  keycloak_token_endpoint = var.keycloak_token_endpoint
-  keycloak_admin_url      = var.keycloak_admin_url
-  waf_edge_acl_arn        = var.waf_edge_acl_arn
+  msk_bootstrap_brokers = var.msk_bootstrap_brokers
+  elasticache_endpoint  = var.elasticache_endpoint
+  opensearch_endpoint   = var.opensearch_endpoint
+  auth_jwks_url         = var.auth_jwks_url
+  waf_edge_acl_arn      = var.waf_edge_acl_arn
 
   media_cloudfront_distribution_id = var.media_cloudfront_distribution_id
   mesh_token_issuer                = var.mesh_token_issuer

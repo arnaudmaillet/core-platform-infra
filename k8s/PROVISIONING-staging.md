@@ -43,8 +43,6 @@ ArgoCD sync:
   **and** `patch-{counter-worker,realtime-dispatcher,audit-worker}-scaler.yaml`)
 - `<<ELASTICACHE_CONFIG_ENDPOINT>>` → the ElastiCache output above
 - `<<OPENSEARCH_ENDPOINT>>` → `terragrunt output --working-dir data/opensearch endpoint` (search.env)
-- `<<KEYCLOAK_TOKEN_ENDPOINT>>` → the Keycloak token URL (auth.env; see §2b)
-- `<<KEYCLOAK_ADMIN_URL>>` → the Keycloak realm Admin API base, `…/admin/realms/core-platform` (auth.env)
 - `<<AUTH_JWKS_URL>>` → auth-server's JWKS endpoint (realtime.env; see §2b)
 - `<<ACM_CERTIFICATE_ARN>>` → the issued ACM cert ARN for `*.core-platform.click`
   (`realtime-gateway-public.yaml`, NLB TLS termination). The public WSS endpoint
@@ -69,14 +67,13 @@ secrets must be created manually (the ExternalSecrets reference them):
   static S3 keys + the v1 ENV-KEK + checkpoint signing key. ⚠ Real AWS KMS + a
   cross-account WORM witness remain the documented external deferral; this wires
   the v1 path so audit can run, with the same WORM bucket used for the witness.
-- `core-platform-staging-auth-secrets` `{signing_private_pem, signing_public_pem,
-  keycloak_client_secret, keycloak_admin_client_secret}` — ES256 keypair + the
-  Keycloak login and admin (service-account) client secrets.
+- `core-platform-staging-auth-secrets` `{signing_private_pem, signing_public_pem}`
+  — the ES256 keypair auth signs edge tokens with.
 
-## 2b. Keycloak (auth prerequisite — not yet provisioned)
-auth brokers to a federated Keycloak that is **not** stood up by this repo. Until
-it is: provide its token endpoint (`<<KEYCLOAK_TOKEN_ENDPOINT>>`), the client
-secret (above), and auth-server's JWKS URL for realtime (`<<AUTH_JWKS_URL>>`).
+## 2b. auth's JWKS (no external IdP)
+Identity is passwordless (Sign in with Apple / Google, email / SMS codes,
+passkeys): there is no external IdP to stand up. Provide auth-server's JWKS URL
+for realtime (`<<AUTH_JWKS_URL>>`).
 realtime's WS plane fails closed (RTM-1001) until the first JWKS fetch succeeds;
 its gRPC health plane is unaffected, so the pod still goes Ready.
 

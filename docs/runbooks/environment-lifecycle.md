@@ -189,10 +189,9 @@ kubectl get scyllaclusters.scylla.scylladb.com -A
 
 **Expected known-degraded (not failures):**
 
-- `realtime` WSS plane fails closed (`RTM-1001`) until `auth`'s JWKS is reachable —
-  Keycloak is **DEFERRED**, so this is expected. The gRPC health plane is
-  unaffected, so the pod still becomes Ready.
-- `AUTH_KEYCLOAK_CLIENT_SECRET` is a placeholder until Keycloak lands.
+- `realtime` WSS plane fails closed (`RTM-1001`) until `auth`'s JWKS is reachable,
+  i.e. until auth-server is up. The gRPC health plane is unaffected, so the pod
+  still becomes Ready.
 
 If a placeholder endpoint leaked into a pod (`${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}`
 literal), fix per the [GitOps CMP failure mode](../infrastructure/gitops-argocd.md#34-cmp--envsubst-render-failures-staging-fleet-only).

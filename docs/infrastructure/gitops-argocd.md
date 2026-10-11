@@ -117,10 +117,8 @@ referenced as **`envsubst-v1.0`**.
 > `${MSK_BOOTSTRAP_BROKERS_SASL_SCRAM}` means the CMP ran but the Secret lacked the
 > key. The value is Terraform-owned: re-run the `kubernetes/argocd` unit so it
 > re-writes `cmp-envsubst-values`, then hard-refresh the App (§6). Placeholders that
-> stay empty on purpose until a dependency lands: `AUTH_JWKS_URL`,
-> `KEYCLOAK_TOKEN_ENDPOINT`, `KEYCLOAK_ADMIN_URL` (DEFERRED until Keycloak; an empty
-> `KEYCLOAK_ADMIN_URL` makes auth's `ChangePassword`/`VerifyCredentials` answer
-> `UNAVAILABLE`).
+> stay empty on purpose until a dependency lands: `AUTH_JWKS_URL` (auth's own JWKS,
+> static per env).
 
 ---
 

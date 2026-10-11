@@ -8,8 +8,7 @@
 #   * <name>-media-s3     {access_key, secret_key}                 (rusty-s3 static keys)
 #   * <name>-scylla-s3    {access_key, secret_key}                 (scylla-manager-agent backups)
 #   * <name>-audit-crypto {object/witness S3 keys, kek_base64, signing_key_base64}
-#   * <name>-auth-secrets {ES256 signing PEM pair, keycloak_client_secret,
-#                          keycloak_admin_client_secret}
+#   * <name>-auth-secrets {ES256 signing PEM pair}
 #   * <name>-auth-smtp    {username, password}                     (SES SMTP, one-time email codes)
 #   * <name>-auth-sns     {access_key_id, secret_access_key}       (SNS SMS, one-time SMS codes)
 #   * <name>-auth-mfa     {seed_key, seed_key_id}                  (TOTP seed encryption key)
@@ -22,7 +21,7 @@
 # documented external deferral — see the audit blueprint; do NOT use this path for
 # prod. The ESO read policy already covers <name>-* (modules/security/irsa-roles).
 #
-# NB: the tls (auth_signing) and random (KEK/signing/keycloak) providers are
+# NB: the tls (auth_signing) and random (KEK/signing) providers are
 # resolved implicitly by Terraform from the resource prefixes. They are NOT
 # declared in a required_providers block here on purpose: Terragrunt generates the
 # module's only versions.tf (aws + time, overwrite_terragrunt) and a module may
@@ -199,57 +198,19 @@ resource "aws_secretsmanager_secret_version" "audit_crypto" {
   })
 }
 
-# ── auth: ES256 signing keypair + Keycloak client secret (placeholder) ────────
-# Keycloak is not yet provisioned (auth prerequisite), so the client secret is a
-# generated placeholder until it lands.
+# ── auth: ES256 signing keypair ─────────────────────────────────────────────────
+# Identity is passwordless (Sign in with Apple / Google, email / SMS codes,
+# passkeys): the former external IdP and its client secrets are retired
+# (backend #881/#918).
 resource "tls_private_key" "auth_signing" {
   algorithm   = "ECDSA"
   ecdsa_curve = "P256"
-}
-
-resource "random_password" "keycloak_client_secret" {
-  length  = 40
-  special = false
-}
-
-# Second confidential client (core-platform-auth-admin): a service account auth
-# uses via client_credentials to set/verify passwords through the Keycloak Admin
-# API (auth.v1.ChangePassword / VerifyCredentials). A SEPARATE resource so adding
-# it never regenerates keycloak_client_secret — same one-value/two-consumers
-# contract: auth sends it, the imported realm expects it.
-resource "random_password" "keycloak_admin_client_secret" {
-  length  = 40
-  special = false
 }
 
 resource "aws_secretsmanager_secret" "auth_secrets" {
   name                    = "${var.name}-auth-secrets"
   recovery_window_in_days = var.secret_recovery_window_days
   tags                    = var.tags
-}
-
-# ── keycloak: bootstrap admin credential ─────────────────────────────────────
-# Consumed by the keycloak platform app's ExternalSecret (ns keycloak) as
-# KC_BOOTSTRAP_ADMIN_PASSWORD. The client secret Keycloak's imported realm
-# expects is the SAME keycloak_client_secret published in <name>-auth-secrets
-# below — one generated value, two consumers, zero drift (likewise
-# keycloak_admin_client_secret for the core-platform-auth-admin client).
-resource "random_password" "keycloak_admin_password" {
-  length  = 32
-  special = false
-}
-
-resource "aws_secretsmanager_secret" "keycloak" {
-  name                    = "${var.name}-keycloak"
-  recovery_window_in_days = var.secret_recovery_window_days
-  tags                    = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "keycloak" {
-  secret_id = aws_secretsmanager_secret.keycloak.id
-  secret_string = jsonencode({
-    admin_password = random_password.keycloak_admin_password.result
-  })
 }
 
 resource "aws_secretsmanager_secret_version" "auth_secrets" {
@@ -259,10 +220,8 @@ resource "aws_secretsmanager_secret_version" "auth_secrets" {
     # ring EC path only accepts PKCS#8 — with SEC1 the key never loads and the
     # service fail-closes with "no signing key is currently available" (found
     # live on the staging bring-up).
-    signing_private_pem          = tls_private_key.auth_signing.private_key_pem_pkcs8
-    signing_public_pem           = tls_private_key.auth_signing.public_key_pem
-    keycloak_client_secret       = random_password.keycloak_client_secret.result
-    keycloak_admin_client_secret = random_password.keycloak_admin_client_secret.result
+    signing_private_pem = tls_private_key.auth_signing.private_key_pem_pkcs8
+    signing_public_pem  = tls_private_key.auth_signing.public_key_pem
   })
 }
 
