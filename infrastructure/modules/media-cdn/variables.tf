@@ -38,8 +38,8 @@ variable "certificate_arn" {
 
 variable "private_prefixes" {
   type        = list(string)
-  description = "Key prefixes the CDN must NEVER serve (explicit Deny for the distribution, whatever the key): takedowns (quarantine/), original uploads (uploads/) and verification documents (private/)."
-  default     = ["quarantine/", "uploads/", "private/"]
+  description = "Key prefixes the CDN must NEVER serve (explicit Deny for the distribution, whatever the key): takedowns (quarantine/), original uploads (uploads/), verification documents (private/) and non-public renditions (restricted/, core-platform-infra#56)."
+  default     = ["quarantine/", "uploads/", "private/", "restricted/"]
 }
 
 variable "price_class" {
