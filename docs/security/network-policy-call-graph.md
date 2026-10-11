@@ -73,6 +73,7 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `geo-discovery` | `SocialGraphServiceClient` | `social-graph:50053` | per-reader map filter (`CheckAccess`) — **fail closed** |
 | `post` | `SocialGraphServiceClient` | `social-graph:50053` | audience check (`CheckAccess`) on non-author reads — **fail closed** |
 | `comment` | `PostServiceClient` + `SocialGraphServiceClient` | `post:50056`, `social-graph:50053` | read gate (`GetPost` + `CheckAccess`) on non-mesh reads — **fail closed** |
+| `comment` | `EngagementServiceClient` | `engagement:50058` | replies by popularity (`BatchGetLikes`, #832) — falls back to newest-first when unreachable |
 | `media` | `ModerationServiceClient` | `moderation:50061` | **fail-closed Screen gate** |
 | `realtime` | `JwksClient` | `auth:50060` | fetch JWKS to verify edge tokens |
 | `chat` | `SocialGraphServiceClient` | `social-graph:50053` | `CheckInteraction(MESSAGE)` for direct messages and group invitations — **fail closed** |
@@ -120,14 +121,14 @@ calling:
   (`service-accounts.yaml` + `patch-mesh-identity.yaml`) and, for a caller, add
   it to the `patch-mesh-caller-token.yaml` selector.
 
-`comment` takes one in-mesh caller, `moderation` (report target lookup), on 50057,
-and `geo-discovery` one, `timeline` (NEARBY), on 50054: both are still in the
-same-namespace allow, not tightened.
+**Callees still in the same-namespace allow** (not tightened; their callers per
+the table above): `comment` (moderation, account, wallet) on 50057,
+`geo-discovery` (timeline NEARBY) on 50054, `engagement` (account, wallet,
+comment) on 50058, `chat` (account) on 50051 and `search` (account) on 50062.
 
 **No in-mesh inbound at all** (→ ingress = health probe only, + the **client
-edge** on :9443, §3): `chat`, `notification`,
-`engagement`, `timeline`, `search`, `media`, `counter-server`, and the workers
-`counter-worker`, `realtime-dispatcher`, `audit-worker`. `audit-server` takes only
+edge** on :9443, §3): `notification`, `timeline`, `counter-server`, and the
+workers `counter-worker`, `realtime-dispatcher`, `audit-worker`. `audit-server` takes only
 the break-glass `RecordPrivileged`/`Query` path (no normal-flow mesh caller).
 `realtime-gateway` takes public WSS on 8443 (already allowed in #519).
 
@@ -242,7 +243,7 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | profile | CNPG, Redis, Scylla | — | both |
 | social-graph | CNPG, Redis, Scylla | — | both |
 | post | CNPG, Scylla | social-graph:50053 | both |
-| comment | CNPG, Scylla | post:50056, social-graph:50053 | both |
+| comment | CNPG, Scylla | post:50056, social-graph:50053, engagement:50058 | both |
 | engagement | CNPG, Redis, Scylla | post:50056, social-graph:50053 | both |
 | counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053, post:50056 (server) | both |
 | geo-discovery | CNPG, Redis, Scylla | social-graph:50053, wallet:50072, account:50059 | consumer |
