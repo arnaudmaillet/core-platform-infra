@@ -3,8 +3,8 @@
 # (key `uri` = full connection string) wired into auth-server (see
 # patch-auth-db.yaml).
 #
-# Holds auth's own session/issuance state. The federated IdP (Keycloak) is a
-# separate concern — auth brokers to it; its datastore is not this cluster.
+# Holds auth's own session/issuance state (identity is passwordless: no external
+# IdP datastore).
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:

@@ -42,8 +42,6 @@ resource "kubernetes_secret" "cmp_envsubst_values" {
       OPENSEARCH_ENDPOINT=${var.opensearch_endpoint}
       ACM_CERTIFICATE_ARN=${var.ssl_certificate_arn}
       AUTH_JWKS_URL=${var.auth_jwks_url}
-      KEYCLOAK_TOKEN_ENDPOINT=${var.keycloak_token_endpoint}
-      KEYCLOAK_ADMIN_URL=${var.keycloak_admin_url}
       WAF_EDGE_ACL_ARN=${var.waf_edge_acl_arn}
       MEDIA_CLOUDFRONT_DISTRIBUTION_ID=${var.media_cloudfront_distribution_id}
       MESH_TOKEN_ISSUER=${var.mesh_token_issuer}

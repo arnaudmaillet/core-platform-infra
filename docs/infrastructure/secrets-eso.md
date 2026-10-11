@@ -112,20 +112,11 @@ job. See the [Terragrunt units reference](terragrunt-units.md#data-plane-managed
 | **`search-creds`** | `search` only | `SEARCH_OPENSEARCH_USER/PASSWORD` ← opensearch-master |
 | **`media-s3-creds`** | `media` only | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
 | **`audit-crypto`** | `audit` only | object+witness access/secret keys, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
-| **`auth-secrets`** | `auth` only | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM`, `AUTH_KEYCLOAK_CLIENT_SECRET` (← `keycloak_client_secret`), `AUTH_KEYCLOAK_ADMIN_CLIENT_SECRET` (← `keycloak_admin_client_secret`) ← auth-secrets |
+| **`auth-secrets`** | `auth` only | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM` ← auth-secrets |
 | **`auth-smtp`** | `auth` only, mounted **`optional`** (a missing SMTP secret must not stop auth from booting) | `AUTH_SMTP_USERNAME/PASSWORD` ← auth-smtp (an IAM user's key id + derived SES SMTP password, allowed to send only as `no-reply@core-platform.click`) |
 | **`auth-sns`** | `auth` only, mounted **`optional`** | `AUTH_SNS_ACCESS_KEY_ID/SECRET_ACCESS_KEY` ← auth-sns (an IAM user that may `sns:Publish` to phone numbers only; account-wide SMS brakes in `global/messaging/sms`) |
 | **`auth-mfa`** | `auth` only, mounted **`optional`** | `AUTH_MFA_SEED_KEY` (32 bytes, base64) / `AUTH_MFA_SEED_KEY_ID` ← auth-mfa. Encrypts every TOTP seed: **never delete or regenerate it once anyone has enrolled** (prod: `prevent_destroy`) |
 | **`account-exports`** | `account` only, mounted **`optional`** | `ACCOUNT_EXPORT_S3_ACCESS_KEY/SECRET_KEY` ← account-exports (an IAM user limited to the GDPR export bucket's `exports/` prefix) |
-
-> **Outside the fleet overlay:** the `keycloak` platform app (ns `keycloak`) carries
-> its own **`keycloak-secrets`** ExternalSecret: `KC_BOOTSTRAP_ADMIN_PASSWORD` ←
-> keycloak (`admin_password`), and `KC_AUTH_CLIENT_SECRET` / `KC_AUTH_ADMIN_CLIENT_SECRET`
-> ← the **same** auth-secrets properties (`keycloak_client_secret` /
-> `keycloak_admin_client_secret`). Its `render-realm` init container stamps them into
-> the imported realm's `core-platform-auth` (login broker) and
-> `core-platform-auth-admin` (Admin API service account: password changes) clients,
-> so auth and Keycloak always share one generated value per client.
 
 Two conventions that trip people up:
 
@@ -242,8 +233,7 @@ kubectl -n external-secrets logs deploy/external-secrets | tail -50
 | `ExternalSecret` `SecretSyncedError`, `AccessDenied` | ESO IRSA role can't read the SM key (wrong prefix / policy) | Confirm the key is under `core-platform-staging-*`; else widen the `external_secrets` policy. |
 | `SecretSyncedError`, `ResourceNotFoundException` | SM entry doesn't exist (seeded secret never provisioned) | Apply `data/app-secrets`; check the property names match. |
 | `SecretSyncedError`, `PendingDeletion` after a rebuild | SM name reserved by a prior teardown | Run `preflight-clean-env.sh staging --fix`, wait, re-apply — see the [lifecycle runbook](../runbooks/environment-lifecycle.md). |
-| Pod env has the var but value is wrong/empty | `property` name mismatch, or SM value seeded blank (e.g. Keycloak placeholder) | Fix the `remoteRef.property`; note `AUTH_KEYCLOAK_CLIENT_SECRET` is a **placeholder** until Keycloak lands (DEFERRED). |
-| auth gets `unauthorized_client` / `invalid_client` from Keycloak (login, or `ChangePassword`/`VerifyCredentials` → admin client) | The realm was imported **before** that client (or secret) existed — `--import-realm` never overwrites an existing realm | Add the client once by hand (Admin console / `kcadm.sh`) with the secret from `…-auth-secrets`; for `core-platform-auth-admin`, also grant its service-account user `realm-management` `view-users` + `manage-users`. |
+| Pod env has the var but value is wrong/empty | `property` name mismatch, or SM value seeded blank | Fix the `remoteRef.property`; check the SM value (`aws secretsmanager get-secret-value`). |
 | Store `ValidationFailed`, `serviceAccountRef` rejected | Someone changed it to a namespaced `SecretStore` | Must be a `ClusterSecretStore` (§2). |
 
 ---

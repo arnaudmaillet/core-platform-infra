@@ -35,12 +35,6 @@ spec:
                 - name: storage-class
                   folder: infrastructure/argocd/apps/infrastructure/platform/storage-class
                   destNamespace: "kube-system"
-                # The platform IdP (in-cluster only; auth brokers all grants).
-                # Depends on cnpg-operator + external-secrets from the operators
-                # appset (wave -10 < this wave -5) for its Cluster/ExternalSecret.
-                - name: keycloak
-                  folder: infrastructure/argocd/apps/infrastructure/platform/keycloak
-                  destNamespace: "keycloak"
           - git:
               repoURL: https://github.com/arnaudmaillet/core-platform-infra
               revision: develop
@@ -91,10 +85,10 @@ spec:
       destination:
         server: https://kubernetes.default.svc
         namespace: "{{.destNamespace}}"
-      # ESO's admission webhook defaults remoteRef fields on ExternalSecrets
-      # (keycloak-secrets) — without ignoring them the app diffs against Git
-      # forever (fleet finding #9 class). Matches only ExternalSecret kinds;
-      # inert for every other platform app.
+      # ESO's admission webhook defaults remoteRef fields on ExternalSecrets —
+      # without ignoring them an app diffs against Git forever (fleet finding #9
+      # class). Matches only ExternalSecret kinds; inert for platform apps that
+      # have none.
       ignoreDifferences:
         - group: external-secrets.io
           kind: ExternalSecret
@@ -109,9 +103,8 @@ spec:
         # Argo CD does NOT re-attempt a failed automated sync of the same revision
         # on its own. These apps have cross-appset dependencies at first install
         # (aws-load-balancer-controller's cert-manager Certificate/Issuer needs
-        # cert-manager's CRDs from the security appset; keycloak's CNPG Cluster
-        # needs the operator) — retry with backoff instead of stalling until the
-        # next commit.
+        # cert-manager's CRDs from the security appset) — retry with backoff
+        # instead of stalling until the next commit.
         retry:
           limit: 10
           backoff:

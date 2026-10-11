@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./README.md
-  source_sha256: 97c7e04613a4b54e8797e6b4ca2390a34bae748de5a34c3f3b22337883753675
-  translated_at: 2026-10-11
+  source_sha256: e0d49e621b8b6682a51e2a14c93ca592ef5de09ae865ced4fafd4a65d696f502
+  translated_at: 2026-10-12
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`README.md`](./README.md) fait foi.
@@ -160,7 +160,7 @@ Terragrunt résout le DAG via `run-all apply` ; l'ordre explicite (chacun consom
 - **À provisionner hors-bande (à créer manuellement dans Secrets Manager sous `core-platform-staging-*`) :**
   - `…-media-s3` `{access_key, secret_key}` — clés statiques d'un utilisateur IAM.
   - `…-audit-crypto` `{object/witness access+secret, kek_base64, signing_key_base64}`.
-  - `…-auth-secrets` `{signing_private_pem, signing_public_pem, keycloak_client_secret, keycloak_admin_client_secret}`.
+  - `…-auth-secrets` `{signing_private_pem, signing_public_pem}`.
   - `…-auth-smtp` `{username, password}` — identifiants SMTP SES des codes à usage unique par email (désormais seedés par `data/app-secrets`).
   - `…-auth-sns` `{access_key_id, secret_access_key}` — clés SNS des codes à usage unique par SMS, numéros de téléphone uniquement (désormais seedés par `data/app-secrets`).
   - `…-auth-mfa` `{seed_key, seed_key_id}` — la clé qui chiffre les graines TOTP ; ne jamais la régénérer une fois utilisée (désormais seedée par `data/app-secrets`).
@@ -168,13 +168,13 @@ Terragrunt résout le DAG via `run-all apply` ; l'ordre explicite (chacun consom
 
 ### 3.3 Étapes manuelles et substituts (placeholders)
 
-Les substituts d'endpoint (`<<…>>`) sont remplacés à partir des sorties Terragrunt au moment du déploiement (dans les fichiers `.env` et les patches de scaler KEDA) : `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (TLS du NLB), `<<WAF_EDGE_ACL_ARN>>` (WAF de l'ALB client-edge), `<<MEDIA_CLOUDFRONT_DISTRIBUTION_ID>>` (purges CDN des retraits de médias), `<<MESH_TOKEN_ISSUER>>` (l'issuer OIDC d'EKS : tokens des appelants mesh), `<<KEYCLOAK_TOKEN_ENDPOINT>>`, `<<KEYCLOAK_ADMIN_URL>>`, `<<AUTH_JWKS_URL>>`. De plus : provisionner les secrets du §3.2 ; vérifier que chaque topic mis à l'échelle sur retard dispose de **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6) ; construire/pousser les images via la CI `fleet-images-deploy` vers `:staging`.
+Les substituts d'endpoint (`<<…>>`) sont remplacés à partir des sorties Terragrunt au moment du déploiement (dans les fichiers `.env` et les patches de scaler KEDA) : `<<MSK_BOOTSTRAP_BROKERS_SASL_SCRAM>>`, `<<ELASTICACHE_CONFIG_ENDPOINT>>`, `<<OPENSEARCH_ENDPOINT>>`, `<<ACM_CERTIFICATE_ARN>>` (TLS du NLB), `<<WAF_EDGE_ACL_ARN>>` (WAF de l'ALB client-edge), `<<MEDIA_CLOUDFRONT_DISTRIBUTION_ID>>` (purges CDN des retraits de médias), `<<MESH_TOKEN_ISSUER>>` (l'issuer OIDC d'EKS : tokens des appelants mesh), `<<AUTH_JWKS_URL>>`. De plus : provisionner les secrets du §3.2 ; vérifier que chaque topic mis à l'échelle sur retard dispose de **≥ maxReplicaCount partitions** (`counter`=12, `realtime`=8, `audit`=4, `media`=6) ; construire/pousser les images via la CI `fleet-images-deploy` vers `:staging`.
 
 ### 3.4 Mises en garde Jour-1 et reports connus
 
 1. **Modèle d'identifiants pour le magasin d'objets (action requise) :** `media` et `audit` construisent leurs clients S3/KMS avec des **identifiants statiques `rusty-s3`**, et *non* la chaîne d'identifiants du SDK AWS — donc les rôles IRSA, bien que provisionnés, ne sont **pas consommés par le code tel quel**. Le staging requiert des clés statiques d'utilisateur IAM injectées dans `media-s3-creds`/`audit-crypto`. Les rôles IRSA restent la cible correcte si le code migre vers le SDK.
 2. **Reports externes d'audit :** le vrai AWS KMS et un véritable témoin WORM inter-comptes sont reportés (travail IAM/organisation) ; le câblage de staging utilise le **chemin KEK-ENV v1** avec le témoin pointé sur le même bucket WORM.
-3. **Keycloak non provisionné :** l'IdP fédéré d'`auth` est externe et pas encore mis en place ; ses identifiants de courtage sont des substituts. Le plan WSS de `realtime` est fail-closed (`RTM-1001`) jusqu'à ce que le JWKS d'auth soit joignable — son plan health gRPC n'est pas affecté, le pod devient donc tout de même Ready.
+3. **Identité sans mot de passe :** les membres se connectent avec Sign in with Apple / Google, des codes email / SMS ou des passkeys, le staff uniquement avec des passkeys ; il n'y a aucun IdP externe à provisionner (l'ancien a été retiré, backend #881). Le plan WSS de `realtime` est fail-closed (`RTM-1001`) jusqu'à ce que le JWKS d'auth soit joignable — son plan health gRPC n'est pas affecté, le pod devient donc tout de même Ready.
 4. **Étiquette `:staging` mutable :** ArgoCD ne redéploiera pas automatiquement sur un re-push d'étiquette sans Argo Image Updater ou un changement de digest ; l'étiquette `:<git-sha>` est disponible pour l'épinglage.
 5. **Écart de charge utile en streaming :** le décalage de forme `post → geo-discovery/notification` (post n'émet ni lat/lng ni légende) reste une décision produit ouverte et suivie — le câblage est correct, la forme ne l'est pas.
 6. **Périphérie client, premier cycle :** l'ALB est un terrain nouveau (premier groupe d'Ingress du dépôt ; les noms d'hôte doivent rester à un seul niveau sous le wildcard `*.core-platform.click` ; external-dns partage une seule zone entre environnements avec `policy: upsert-only`, donc des enregistrements `api-*` périmés survivent à un démontage ; le SG des nœuds n'a pas de règle pour les ports gRPC — ALB→pod repose sur l'automatisation backend-SG du LB controller, comme le faisait déjà l'ALB profile de dev). La **révocation** des tokens de périphérie est **bornée par le TTL** (TTL d'accès de 10 min) : le claim `gen` n'est pas revérifié par les services (le « petit lookup » de l'ADR-0005 reste à faire), et un profil créé après une émission devient actionnable au prochain refresh. L'inscription (`account.CreateAccount`) et les RPC staff/conformité ne sont délibérément **pas** sur la périphérie tant qu'un catalogue de permissions n'existe pas.

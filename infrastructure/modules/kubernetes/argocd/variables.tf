@@ -41,14 +41,6 @@ variable "auth_jwks_url" {
   type    = string
   default = ""
 }
-variable "keycloak_token_endpoint" {
-  type    = string
-  default = ""
-}
-variable "keycloak_admin_url" {
-  type    = string
-  default = ""
-}
 variable "waf_edge_acl_arn" {
   type    = string
   default = ""
