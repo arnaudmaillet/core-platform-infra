@@ -6,6 +6,18 @@ include "root" {
 
 dependency "vpc" {
   config_path = "../../networking/vpc"
+
+  # Plan/validate mocks let `run-all plan` cover this unit before the VPC exists
+  # (first bring-up, or after a teardown); destroy, because a partial teardown can
+  # leave the vpc unit without outputs and brick this unit's destroy. Terragrunt
+  # only uses them when the vpc unit has no outputs; apply always needs the real
+  # VPC. Shaped like the real outputs (2 AZs, the env.hcl CIDR).
+  mock_outputs_allowed_terraform_commands = ["validate", "plan", "destroy"]
+  mock_outputs = {
+    vpc_id                  = "vpc-00000000000000000"
+    private_data_subnet_ids = ["subnet-00000000000000000", "subnet-00000000000000001"]
+    vpc_cidr_block          = local.env_vars.locals.vpc_cidr
+  }
 }
 
 terraform {
