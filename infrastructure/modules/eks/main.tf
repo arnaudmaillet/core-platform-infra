@@ -29,6 +29,12 @@ module "eks" {
   vpc_id     = var.vpc_id
   subnet_ids = var.private_subnet_ids
 
+  # Control-plane logs to CloudWatch (billed per GB ingested; audit is the
+  # bulk). Default = the module's own (api, audit, authenticator); an env can
+  # turn them off, and then no log group is created.
+  cluster_enabled_log_types   = var.cluster_enabled_log_types
+  create_cloudwatch_log_group = length(var.cluster_enabled_log_types) > 0
+
   enable_cluster_creator_admin_permissions = true
   enable_irsa                              = true
 

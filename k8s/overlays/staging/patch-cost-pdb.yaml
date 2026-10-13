@@ -1,0 +1,10 @@
+# k8s/overlays/staging/patch-cost-pdb.yaml
+#
+# With one replica, the base PDBs (minAvailable 1) would forbid every eviction,
+# so Karpenter could never consolidate or drain a node holding them. In staging
+# a voluntary disruption may take the single pod down briefly instead.
+- op: remove
+  path: /spec/minAvailable
+- op: add
+  path: /spec/maxUnavailable
+  value: 1

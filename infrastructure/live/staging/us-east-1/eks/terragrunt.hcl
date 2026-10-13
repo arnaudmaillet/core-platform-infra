@@ -40,6 +40,11 @@ inputs = {
   # control plane at end of standard support instead (see modules/eks).
   cluster_support_type = "STANDARD"
 
+  # Staging cost: no control-plane logs in CloudWatch (audit alone was the
+  # bulk of the log bill). Debug with kubectl / the pods' own logs. PROD keeps
+  # the module default (api, audit, authenticator).
+  cluster_enabled_log_types = []
+
   # Tighten the public API endpoint to your admin/CI ranges when ready, e.g.:
   # endpoint_public_access_cidrs = ["203.0.113.4/32"]
 

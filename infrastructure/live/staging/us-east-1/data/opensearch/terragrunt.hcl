@@ -40,6 +40,10 @@ inputs = {
   # rebuild doesn't collide with its recovery window. PROD => omit (recoverable).
   secret_recovery_window_days = 0
 
+  # Staging cost: one data node (no zone awareness). Indexes with a replica
+  # report yellow health, which search tolerates. PROD sets its own count.
+  instance_count = 1
+
   tags = {
     Environment = local.env_vars.locals.env
     ManagedBy   = "terragrunt"

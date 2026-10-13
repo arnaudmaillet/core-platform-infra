@@ -6,6 +6,10 @@ metadata:
   name: argocd-server-ingress
   namespace: argocd
   annotations:
+    # One shared ALB for the admin UIs (ArgoCD + Grafana) instead of one each:
+    # an ALB bills ~16 USD/month plus a public IPv4 per AZ. The group's
+    # LB-level settings (scheme, inbound-cidrs) must stay identical in both.
+    alb.ingress.kubernetes.io/group.name: core-platform-admin
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
