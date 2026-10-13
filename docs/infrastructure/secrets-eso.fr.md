@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./secrets-eso.md
-  source_sha256: a2ad4355c19da718b96e04150d62817782f1ce04dcd0e47350c71ffa44ba6335
-  translated_at: 2026-10-12
+  source_sha256: bc9682bfb7e3b956de10c5f41ffd93a3bd923aa1b2482e4c3a152a81c5f3c792
+  translated_at: 2026-10-13
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`secrets-eso.md`](./secrets-eso.md) fait foi.
@@ -44,6 +44,7 @@ l'intérêt de la topologie.
 │    core-platform-staging-redis-auth           {password}                  │
 │    core-platform-staging-opensearch-master    {username, password}        │
 │    core-platform-staging-media-s3             {access_key, secret_key}    │
+│    core-platform-staging-media-cdn-cookie     {key_pair_id, private_key}  │
 │    core-platform-staging-audit-crypto         {object/witness keys, kek…} │
 │    core-platform-staging-auth-secrets         {signing pems, kc secret}   │
 │    core-platform-staging-auth-smtp            {username, password}        │
@@ -60,6 +61,7 @@ l'intérêt de la topologie.
 │      ├─ ExternalSecret backend-creds   ──► Secret backend-creds  (fleet)   │
 │      ├─ ExternalSecret search-creds     ──► Secret search-creds   (search) │
 │      ├─ ExternalSecret media-s3-creds   ──► Secret media-s3-creds (media)  │
+│      ├─ ExternalSecret media-cdn-cookie ──► Secret media-cdn-cookie (media)│
 │      ├─ ExternalSecret audit-crypto     ──► Secret audit-crypto   (audit)  │
 │      ├─ ExternalSecret auth-secrets     ──► Secret auth-secrets   (auth)   │
 │      ├─ ExternalSecret auth-smtp        ──► Secret auth-smtp      (auth)   │
@@ -107,7 +109,7 @@ accorde la lecture sur `core-platform-staging-*` (et le secret `AmazonMSK_*`).
 
 | Classe | Comment elle arrive dans Secrets Manager | Exemples |
 |---|---|---|
-| **Machine-généré** | Écrit par les **modules Terraform de datastore** au moment de l'apply. | MSK SCRAM (`AmazonMSK_…_app`), Redis AUTH (`…-redis-auth`), OpenSearch master (`…-opensearch-master`). |
+| **Machine-généré** | Écrit par les **modules Terraform de datastore** (et `networking/media-cdn`) au moment de l'apply. | MSK SCRAM (`AmazonMSK_…_app`), Redis AUTH (`…-redis-auth`), OpenSearch master (`…-opensearch-master`), la clé de cookies CloudFront de media (`…-media-cdn-cookie`). |
 | **Seedé** | Provisionné par l'unité Terragrunt **`data/app-secrets`** (auparavant créé hors-bande à la main). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`, `…-auth-smtp`, `…-auth-sns`, `…-auth-mfa`, `…-account-exports`. |
 
 Les deux classes finissent en entrées SM sous le préfixe `core-platform-staging-*`
@@ -119,13 +121,14 @@ seedées sont le travail de l'unité `data/app-secrets`. Voir la
 
 ---
 
-## 4. Les neuf ExternalSecrets (ce que chacun alimente)
+## 4. Les dix ExternalSecrets (ce que chacun alimente)
 
 | ExternalSecret → k8s Secret | Consommé par | Clés (env var ← propriété SM) |
 |---|---|---|
 | **`backend-creds`** (`envFrom` de toute la flotte) | tout service touchant Kafka/Redis | `KAFKA_SASL_USERNAME/PASSWORD` ← secret app MSK ; `REDIS_PASSWORD` ← redis-auth ; le même `REDIS_PASSWORD` alimente aussi `EDGE_REVOCATION_REDIS_PASSWORD` sur chaque vérificateur de tokens edge (état de révocation d'auth, #73) |
 | **`search-creds`** | `search` seulement | `SEARCH_OPENSEARCH_USER/PASSWORD` ← opensearch-master |
 | **`media-s3-creds`** | `media` seulement | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
+| **`media-cdn-cookie`** | `media-server` seulement, monté en **`optional`** (sans lui, media garde les URL présignées) | `MEDIA_CDN_COOKIE_KEY_PAIR_ID` / `MEDIA_CDN_COOKIE_PRIVATE_KEY` ← media-cdn-cookie : la paire de clés CloudFront générée par `networking/media-cdn` (clé privée aussi dans le state de cette unité) ; signe les cookies qui ouvrent `restricted/*` (#90) |
 | **`audit-crypto`** | `audit` seulement | clés object+witness access/secret, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
 | **`auth-secrets`** | `auth` seulement | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM` ← auth-secrets |
 | **`auth-smtp`** | `auth` seulement, monté en **`optional`** (un secret SMTP absent ne doit pas empêcher auth de démarrer) | `AUTH_SMTP_USERNAME/PASSWORD` ← auth-smtp (id de clé d'un utilisateur IAM + mot de passe SMTP SES dérivé, autorisé à envoyer uniquement en tant que `no-reply@core-platform.click`) |

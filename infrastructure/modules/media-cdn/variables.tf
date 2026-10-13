@@ -38,8 +38,20 @@ variable "certificate_arn" {
 
 variable "private_prefixes" {
   type        = list(string)
-  description = "Key prefixes the CDN must NEVER serve (explicit Deny for the distribution, whatever the key): takedowns (quarantine/), original uploads (uploads/), verification documents (private/) and non-public renditions (restricted/, core-platform-infra#56)."
-  default     = ["quarantine/", "uploads/", "private/", "restricted/"]
+  description = "Key prefixes the CDN must NEVER serve (explicit Deny for the distribution, whatever the key): takedowns (quarantine/), original uploads (uploads/) and verification documents (private/). Non-public renditions (signed_prefix) are served to signed cookies only, not denied."
+  default     = ["quarantine/", "uploads/", "private/"]
+}
+
+variable "signed_prefix" {
+  type        = string
+  description = "Key prefix of the non-public renditions (core-platform-infra#56, #90): served only to requests carrying valid CloudFront signed cookies from this module's key group. Media writes there behind MEDIA_RESTRICTED_PREFIX_ENABLED."
+  default     = "restricted/"
+}
+
+variable "secret_recovery_window_days" {
+  type        = number
+  description = "Recovery window of the cookie signing-key secret. 0 for disposable envs (a rebuild reuses the name at once); omit in prod (recoverable)."
+  default     = 30
 }
 
 variable "price_class" {

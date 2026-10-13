@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./terragrunt-units.md
-  source_sha256: 70d7cddd606966087150c956ea744f6e36fbec684f5cd650f2c87d1314d4230c
-  translated_at: 2026-10-12
+  source_sha256: cdf375c5b85fbb06f16c5fc428e969d6a323476d66e4d028294340f0355ba046
+  translated_at: 2026-10-13
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`terragrunt-units.md`](./terragrunt-units.md) fait foi.
@@ -132,7 +132,7 @@ Légende : **Module** = module sous-jacent · **Depends on** = unités consommé
 |---|---|---|---|
 | **`security/irsa-roles`** | `security/irsa-roles` | `eks`, `audit-kms`, `audit-worm`, `media-bucket`, `cnpg-backups` | Les rôles IRSA : ESO, Karpenter, LB controller, external-dns, cert-manager, EBS CSI, et les rôles applicatifs (audit=seul principal KMS/WORM, media=RW du bucket). → ARN par rôle. |
 | **`security/waf-edge`** | `waf-edge` | — | Web ACL AWS WAF (REGIONAL) de l'ALB client-edge : règles de débit par IP (tout l'edge + `StartGuestSession`), règles managées AWS IP reputation / known bad inputs / common rule set (en count par défaut), Bot Control derrière un flag ; logs CloudWatch (`authorization` masqué). → `web_acl_arn`, passé au CMP en `WAF_EDGE_ACL_ARN` et associé par le LB controller depuis l'annotation de l'Ingress. |
-| **`networking/media-cdn`** | `media-cdn` | `media-bucket`, `acm-cert`, `app-secrets` | CloudFront (OAC) devant le bucket média, alias `media[-staging].core-platform.click` : cache immuable 1 an, GET/HEAD, HTTPS seulement. **Possède la bucket policy du bucket média** (lecture CDN ; Deny explicite sur `quarantine/`, `uploads/`, `private/`, `restricted/`) et accorde `cloudfront:CreateInvalidation` à l'utilisateur IAM media. → `distribution_id`, passé au CMP en `MEDIA_CLOUDFRONT_DISTRIBUTION_ID`. |
+| **`networking/media-cdn`** | `media-cdn` | `media-bucket`, `acm-cert`, `app-secrets` | CloudFront (OAC) devant le bucket média, alias `media[-staging].core-platform.click` : cache immuable 1 an, GET/HEAD, HTTPS seulement. **Possède la bucket policy du bucket média** (lecture CDN ; Deny explicite sur `quarantine/`, `uploads/`, `private/`) et accorde `cloudfront:CreateInvalidation` à l'utilisateur IAM media. Sert `restricted/*` **aux seuls cookies signés CloudFront** : génère la paire de clés RSA, le key group et le secret de clé de cookies de media `…-media-cdn-cookie` (#90). → `distribution_id`, passé au CMP en `MEDIA_CLOUDFRONT_DISTRIBUTION_ID`. |
 | **`kubernetes/argocd`** | `kubernetes/argocd` | `vpc`, `eks`, `security/irsa-roles`, `msk`, `elasticache`, `opensearch`, `acm-cert`, `app-secrets`, `waf-edge`, `media-cdn` | Installe ArgoCD + `root-bootstrap` (cible `bootstrap/staging`). Écrit **`cmp-envsubst-values`** (endpoints des datastores et ARN de l'ACL WAF pour le CMP) et **`global-params-staging.json`**. Porte le **`before_hook` de graceful-cleanup sur `destroy`**. |
 
 > L'unité `kubernetes/argocd` est la couture entre Terraform et GitOps : c'est la

@@ -10,12 +10,18 @@
 #   * GET/HEAD only, HTTPS only (HTTP redirects), compression on. HLS (.m3u8,
 #     .m4s) is served as-is.
 #   * NEVER served, whatever the key: quarantine/ (takedowns,
-#     core-platform-backend#758), uploads/ (originals), private/ (verification
-#     documents, #777) and restricted/ (non-public renditions, per asset,
-#     core-platform-infra#56): an explicit Deny for the distribution in the bucket
+#     core-platform-backend#758), uploads/ (originals) and private/ (verification
+#     documents, #777): an explicit Deny for the distribution in the bucket
 #     policy. Those are read only through short-lived S3 presigned URLs signed
-#     with media's own keys, which this policy does not affect. restricted/ is
-#     inert until media writes there (MEDIA_RESTRICTED_PREFIX_ENABLED).
+#     with media's own keys, which this policy does not affect.
+#   * SIGNED ONLY: restricted/ (non-public renditions, per asset,
+#     core-platform-infra#56/#90). Its own cache behavior trusts this module's
+#     key group, so CloudFront answers 403 without valid signed cookies. Media
+#     signs a custom policy over the asset's whole tree (an HLS master, its rung
+#     playlists and segments: a presigned master URL can't authorize the
+#     relative URIs a player resolves). A viewer-request function on the default
+#     behavior refuses an encoded path that S3 would decode into restricted/.
+#     Inert until media writes there (MEDIA_RESTRICTED_PREFIX_ENABLED).
 #   * Takedown purge: the media IAM user gets cloudfront:CreateInvalidation on
 #     this distribution (MEDIA_CLOUDFRONT_DISTRIBUTION_ID).
 #
@@ -62,6 +68,72 @@ locals {
   origin_id = "media-s3"
 }
 
+# ── Signed cookies for restricted/ (core-platform-infra#90) ───────────────────
+# The signing key is generated HERE, so no one handles it. The private key
+# therefore sits in this unit's Terraform state (S3, encrypted, like the other
+# generated credentials) and in Secrets Manager, which media reads through ESO
+# (media-cdn-cookie: MEDIA_CDN_COOKIE_KEY_PAIR_ID / MEDIA_CDN_COOKIE_PRIVATE_KEY).
+# Cookies live 1 h (MEDIA_CDN_COOKIE_TTL_SECS), so rotating means `-replace` on
+# tls_private_key.cookie, then restarting media-server: cookies issued under the
+# old key fail at once and players fetch fresh ones on the next resolve.
+resource "tls_private_key" "cookie" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "aws_cloudfront_public_key" "cookie" {
+  name        = "${var.name}-media-cookie"
+  comment     = "Verifies media's signed cookies on ${var.signed_prefix}*."
+  encoded_key = tls_private_key.cookie.public_key_pem
+}
+
+resource "aws_cloudfront_key_group" "cookie" {
+  name    = "${var.name}-media-cookie"
+  comment = "Signers of ${var.signed_prefix}* (media-server)."
+  items   = [aws_cloudfront_public_key.cookie.id]
+}
+
+resource "aws_secretsmanager_secret" "cookie" {
+  name                    = "${var.name}-media-cdn-cookie"
+  description             = "media-server's CloudFront signed-cookie key (key pair id + RSA private key, PKCS#1 PEM)."
+  recovery_window_in_days = var.secret_recovery_window_days
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "cookie" {
+  secret_id = aws_secretsmanager_secret.cookie.id
+  secret_string = jsonencode({
+    key_pair_id = aws_cloudfront_public_key.cookie.id
+    private_key = tls_private_key.cookie.private_key_pem
+  })
+}
+
+# A request that reaches the DEFAULT behavior never matched "restricted/*"
+# literally, but S3 decodes the key (restricted%2F… is restricted/…). Refuse
+# any path that decodes into the signed prefix, so only the signed behavior
+# serves it.
+resource "aws_cloudfront_function" "guard_signed_prefix" {
+  name    = "${var.name}-media-guard-signed"
+  runtime = "cloudfront-js-2.0"
+  comment = "403 for encoded paths into ${var.signed_prefix} on the default behavior."
+  publish = true
+  code    = <<-JS
+    function handler(event) {
+      var uri = event.request.uri;
+      var decoded;
+      try {
+        decoded = decodeURIComponent(uri);
+      } catch (e) {
+        return { statusCode: 400, statusDescription: "Bad Request" };
+      }
+      if (decoded.replace(/^\/+/, "").indexOf("${var.signed_prefix}") === 0) {
+        return { statusCode: 403, statusDescription: "Forbidden" };
+      }
+      return event.request;
+    }
+  JS
+}
+
 resource "aws_cloudfront_distribution" "media" {
   enabled         = true
   is_ipv6_enabled = true
@@ -84,6 +156,25 @@ resource "aws_cloudfront_distribution" "media" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     cache_policy_id        = aws_cloudfront_cache_policy.immutable.id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.guard_signed_prefix.arn
+    }
+  }
+
+  # Non-public renditions: signed cookies only. Same immutable cache (the
+  # cookies are validated at the edge, before the cache, and never forwarded
+  # or keyed on).
+  ordered_cache_behavior {
+    path_pattern           = "${var.signed_prefix}*"
+    target_origin_id       = local.origin_id
+    viewer_protocol_policy = "https-only"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    cache_policy_id        = aws_cloudfront_cache_policy.immutable.id
+    trusted_key_groups     = [aws_cloudfront_key_group.cookie.id]
   }
 
   viewer_certificate {

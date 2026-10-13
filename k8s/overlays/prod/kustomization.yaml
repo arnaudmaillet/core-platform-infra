@@ -284,6 +284,10 @@ patches:
     target:
       kind: Deployment
       name: media-worker
+  - path: patch-media-cdn-cookie.yaml
+    target:
+      kind: Deployment
+      name: media-server
   - path: patch-auth-secrets.yaml
     target:
       kind: Deployment

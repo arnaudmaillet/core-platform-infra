@@ -2,7 +2,8 @@
 #
 # CloudFront (OAC) in front of the media bucket, alias media.core-platform.click
 # (guest-mode B6, core-platform-infra#25). Owns the media bucket's policy (CDN
-# read, never quarantine/ uploads/ private/ restricted/) and grants the media IAM user the
+# read, never quarantine/ uploads/ private/; restricted/ to signed cookies only, with
+# the key pair, key group and media's cookie-key secret, #90) and grants the media IAM user the
 # takedown purge. Its distribution id reaches media through the envsubst CMP
 # (MEDIA_CLOUDFRONT_DISTRIBUTION_ID, kubernetes/argocd), so this unit applies
 # before argocd. The env's wildcard ACM cert (us-east-1) covers the alias.
