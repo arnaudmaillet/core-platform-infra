@@ -31,6 +31,7 @@ credentials for secret retrieval — that is the whole point of the topology.
 │    core-platform-staging-redis-auth           {password}                  │
 │    core-platform-staging-opensearch-master    {username, password}        │
 │    core-platform-staging-media-s3             {access_key, secret_key}    │
+│    core-platform-staging-media-cdn-cookie     {key_pair_id, private_key}  │
 │    core-platform-staging-audit-crypto         {object/witness keys, kek…} │
 │    core-platform-staging-auth-secrets         {signing pems, kc secret}   │
 │    core-platform-staging-auth-smtp            {username, password}        │
@@ -47,6 +48,7 @@ credentials for secret retrieval — that is the whole point of the topology.
 │      ├─ ExternalSecret backend-creds   ──► Secret backend-creds  (fleet)   │
 │      ├─ ExternalSecret search-creds     ──► Secret search-creds   (search) │
 │      ├─ ExternalSecret media-s3-creds   ──► Secret media-s3-creds (media)  │
+│      ├─ ExternalSecret media-cdn-cookie ──► Secret media-cdn-cookie (media)│
 │      ├─ ExternalSecret audit-crypto     ──► Secret audit-crypto   (audit)  │
 │      ├─ ExternalSecret auth-secrets     ──► Secret auth-secrets   (auth)   │
 │      ├─ ExternalSecret auth-smtp        ──► Secret auth-smtp      (auth)   │
@@ -93,7 +95,7 @@ grants read on `core-platform-staging-*` (and the `AmazonMSK_*` secret).
 
 | Class | How it gets into Secrets Manager | Examples |
 |---|---|---|
-| **Machine-generated** | Written by the **data-store Terraform modules** at apply time. | MSK SCRAM (`AmazonMSK_…_app`), Redis AUTH (`…-redis-auth`), OpenSearch master (`…-opensearch-master`). |
+| **Machine-generated** | Written by the **data-store Terraform modules** (and `networking/media-cdn`) at apply time. | MSK SCRAM (`AmazonMSK_…_app`), Redis AUTH (`…-redis-auth`), OpenSearch master (`…-opensearch-master`), media's CloudFront cookie key (`…-media-cdn-cookie`). |
 | **Seeded** | Provisioned by the **`data/app-secrets`** Terragrunt unit (formerly created out-of-band by hand). | `…-media-s3`, `…-audit-crypto`, `…-auth-secrets`, `…-auth-smtp`, `…-auth-sns`, `…-auth-mfa`, `…-account-exports`. |
 
 Both classes end up as SM entries under the `core-platform-staging-*` (or
@@ -104,13 +106,14 @@ job. See the [Terragrunt units reference](terragrunt-units.md#data-plane-managed
 
 ---
 
-## 4. The nine ExternalSecrets (what each feeds)
+## 4. The ten ExternalSecrets (what each feeds)
 
 | ExternalSecret → k8s Secret | Consumed by | Keys (env var ← SM property) |
 |---|---|---|
 | **`backend-creds`** (fleet-wide `envFrom`) | every service touching Kafka/Redis | `KAFKA_SASL_USERNAME/PASSWORD` ← MSK app secret; `REDIS_PASSWORD` ← redis-auth; the same `REDIS_PASSWORD` also feeds `EDGE_REVOCATION_REDIS_PASSWORD` on every edge-token verifier (auth's revocation state, #73) |
 | **`search-creds`** | `search` only | `SEARCH_OPENSEARCH_USER/PASSWORD` ← opensearch-master |
 | **`media-s3-creds`** | `media` only | `MEDIA_S3_ACCESS_KEY/SECRET_KEY` ← media-s3 |
+| **`media-cdn-cookie`** | `media-server` only, mounted **`optional`** (without it, media keeps presigned URLs) | `MEDIA_CDN_COOKIE_KEY_PAIR_ID` / `MEDIA_CDN_COOKIE_PRIVATE_KEY` ← media-cdn-cookie: the CloudFront key pair `networking/media-cdn` generates (private key in that unit's state too); signs the cookies that open `restricted/*` (#90) |
 | **`audit-crypto`** | `audit` only | object+witness access/secret keys, `AUDIT_KEK_BASE64`, `AUDIT_CHECKPOINT_SIGNING_KEY_BASE64` ← audit-crypto |
 | **`auth-secrets`** | `auth` only | `AUTH_SIGNING_PRIVATE/PUBLIC_PEM` ← auth-secrets |
 | **`auth-smtp`** | `auth` only, mounted **`optional`** (a missing SMTP secret must not stop auth from booting) | `AUTH_SMTP_USERNAME/PASSWORD` ← auth-smtp (an IAM user's key id + derived SES SMTP password, allowed to send only as `no-reply@core-platform.click`) |

@@ -1,0 +1,12 @@
+# k8s/overlays/staging/patch-media-cdn-cookie.yaml
+#
+# CloudFront signed-cookie key (media-cdn-cookie ExternalSecret, #90) into
+# media-server only: it resolves deliveries, the worker never signs. optional:
+# a missing secret leaves the vars unset and media keeps presigned URLs. Set, a
+# key that does not parse stops media from starting (fail-closed by design).
+- op: add
+  path: /spec/template/spec/containers/0/envFrom/-
+  value:
+    secretRef:
+      name: media-cdn-cookie
+      optional: true
