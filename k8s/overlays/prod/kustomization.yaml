@@ -245,7 +245,7 @@ patches:
   - path: patch-mesh-caller-token.yaml
     target:
       kind: Deployment
-      labelSelector: "app in (account-server,geo-discovery-server)"
+      labelSelector: "app in (account-server,geo-discovery-server,post-server,chat-server)"
   # Sign-in critical path: auth + account HPAs keep one replica per AZ (#69).
   - path: patch-hpa-tier0-sign-in.yaml
   - path: patch-backend-creds.yaml

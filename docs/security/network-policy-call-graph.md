@@ -39,7 +39,7 @@ Derived from code + config, not guesswork:
 | 50070 | timeline | client-facing (read) |
 | 50061 | moderation | **mesh callee** (Screen) |
 | 50062 | search | client-facing (read) |
-| 50063 | media | **mesh callee** (account, profile) + client-facing |
+| 50063 | media | **mesh callee** (account, profile, post, chat) + client-facing |
 | 50064 | counter-server | client-facing (read) |
 | 50065 | counter-worker | worker (health only) |
 | 50066 / 8443 | realtime-gateway | internal health / **public WSS** |
@@ -88,6 +88,8 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `engagement` | `SocialGraphServiceClient` | `social-graph:50053` | Likes tab: `CheckAccess` for non-owner readers — **fail closed** (empty tab) |
 | `geo-discovery`, `account` | `WalletServiceClient` | `wallet:50072` | country unlocks (`GetWallet`, `SpendGems`); GDPR export (`wallet.json`) |
 | `profile` | `MediaServiceClient` | `media:50063` | verification documents: the requester's own, READY (`GetAsset`) |
+| `post` | `MediaServiceClient` | `media:50063` | attachment assets (#88): `GetAsset` on write, `BatchResolveDelivery` on read, `ChangeDeliveryVisibility` for private authors (mesh-gated). Off while `POST_MEDIA_GRPC_ENDPOINT` is unset |
+| `chat` | `MediaServiceClient` | `media:50063` | message media (#89): `GetAsset` + `ChangeDeliveryVisibility` on send (mesh-gated), `BatchResolveDelivery` on `GetHistory`. Off while `CHAT_MEDIA_GRPC_ENDPOINT` is unset |
 
 ### Inbound matrix (who a policy must allow)
 
@@ -100,19 +102,20 @@ The only `*Client` types instantiated anywhere in `crates/services/*`:
 | `moderation` | `media`, `account` | 50061 |
 | `auth` | `realtime` | 50060 |
 | `wallet` | `geo-discovery`, `account` **only** (`SpendGems` has no caller gate yet, backend#852) | 50072 |
-| `media` | `account` (GDPR export, `ListAssetsByOwner`), `profile` (verification documents, `GetAsset`) **only**: `GetPrivateDocumentUrl` signs links to ID documents | 50063 |
+| `media` | `account` (GDPR export, `ListAssetsByOwner`), `profile` (verification documents, `GetAsset`), `post` and `chat` (attachment and message assets) **only**: `GetPrivateDocumentUrl` signs links to ID documents | 50063 |
 | `auth` (JWKS, HTTP) | **every server pod** — all edge-token verifiers | 8081 |
 
 ### Mesh caller identity (L7, #62)
 
 NetworkPolicy is L4: it can't tell *which RPC* a caller may reach on a port. For
 the sensitive mesh-only RPCs (`wallet.SpendGems`, wallet's export RPCs,
-`moderation.ListReportsByReporter`) the callee also checks **which service** is
-calling:
-- callers (`account-server`, `geo-discovery-server`) run under their own
+`moderation.ListReportsByReporter`, `media.ChangeDeliveryVisibility`) the callee
+also checks **which service** is calling:
+- callers (`account-server`, `geo-discovery-server`, `post-server`,
+  `chat-server`) run under their own
   ServiceAccount and send a projected token (audience `core-platform-mesh`,
   `patch-mesh-caller-token.yaml`) as `x-mesh-token`;
-- gated callees (`moderation-server`, `wallet-server`) verify it against the
+- gated callees (`moderation-server`, `wallet-server`, `media-server`) verify it against the
   cluster's JWKS, fetched in-cluster from the API server
   (`mesh-identity-rbac.yaml`), issuer `MESH_TOKEN_ISSUER` (the EKS OIDC issuer,
   via the CMP);
@@ -253,14 +256,14 @@ Every pod also needs: **DNS** → `kube-system` CoreDNS :53 (UDP/TCP), and **OTe
 | auth | CNPG `auth`, Redis, **internet** (see below) | account:50059, profile:50052 | producer |
 | profile | CNPG, Redis, Scylla | — | both |
 | social-graph | CNPG, Redis, Scylla | — | both |
-| post | CNPG, Scylla | social-graph:50053 | both |
+| post | CNPG, Scylla | social-graph:50053, media:50063 | both |
 | comment | CNPG, Scylla | post:50056, social-graph:50053, engagement:50058 | both |
 | engagement | CNPG, Redis, Scylla | post:50056, social-graph:50053 | both |
 | counter (server+worker) | CNPG, Redis, Scylla | social-graph:50053, post:50056 (server) | both |
 | geo-discovery | CNPG, Redis, Scylla | social-graph:50053, wallet:50072, account:50059 | consumer |
 | notification | CNPG, Redis, Scylla, **internet** (APNs, see below) | profile:50052 | consumer |
 | timeline | CNPG, Redis, Scylla | social-graph:50053, geo-discovery:50054 | consumer |
-| chat | CNPG, Redis, Scylla | social-graph:50053 | producer |
+| chat | CNPG, Redis, Scylla | social-graph:50053, media:50063 | producer |
 | moderation | CNPG, Redis, Scylla | account:50059, post:50056, comment:50057, profile:50052 | both |
 | media (server) | CNPG, Redis, **S3** (asset + object-store) | moderation:50061 | both |
 | media (worker) | CNPG, Redis, **S3** (renditions) | — | consumer |

@@ -37,3 +37,21 @@ spec:
   template:
     spec:
       serviceAccountName: wallet-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-server
+spec:
+  template:
+    spec:
+      serviceAccountName: post-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-server
+spec:
+  template:
+    spec:
+      serviceAccountName: chat-server

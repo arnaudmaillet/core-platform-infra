@@ -213,6 +213,7 @@ live cluster, read `retention.ms` with
 | Switch (service) | Set it when | Done when the pods log | Then |
 |---|---|---|---|
 | `PROFILE_BACKFILL_TAB_SETTINGS=true` (profile-server; core-platform-infra#66, backend #873/#877) | the env already holds profiles whose tab settings were changed **before** `profile.v1.events`' retention, when post / engagement first consume `ProfileTabSettingsChanged` | `tab settings backfill done` | remove the var in the next commit. Every replica re-runs it at each start: harmless (last writer wins) but N× topic load, and an old value can overtake a newer one if owners edit meanwhile |
+| `PROFILE_BACKFILL_VISIBILITY=true` (profile-server; core-platform-infra#88, backend #927/#929) | the env already holds **private** profiles when post → media goes live (`POST_MEDIA_GRPC_ENDPOINT` set): it re-announces them so post makes their images SIGNED | `visibility backfill done` | remove the var in the next commit (same caveats as above) |
 
 Procedure: add the var to `k8s/overlays/<env>/profile.env` in its own PR, let
 ArgoCD roll profile-server, watch for the log line, then a second PR removes it.
