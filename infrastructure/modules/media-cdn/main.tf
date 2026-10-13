@@ -134,6 +134,12 @@ resource "aws_cloudfront_function" "guard_signed_prefix" {
   JS
 }
 
+# ⚠️ The bucket policy can't tell this distribution's behaviors apart, so
+# restricted/ is guarded by CloudFront alone: the restricted/* behavior
+# (trusted_key_groups) and the guard function on the default behavior. Any
+# ordered_cache_behavior added later (e.g. "*.m3u8") MUST also carry the
+# guard_signed_prefix function_association, or an encoded path
+# (restricted%2F…) matching it would reach restricted/ unsigned.
 resource "aws_cloudfront_distribution" "media" {
   enabled         = true
   is_ipv6_enabled = true
