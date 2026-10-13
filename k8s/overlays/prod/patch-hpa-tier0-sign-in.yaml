@@ -2,7 +2,8 @@
 #
 # The sign-in critical path (auth, and account which auth reads on every
 # sign-in and refresh, fail-closed) keeps one replica per AZ in prod: 3 AZs,
-# minReplicas 3 (core-platform-infra#69). Staging stays at the base minimum (2).
+# minReplicas 3 (core-platform-infra#69). Staging floors every HPA at 1
+# (staging patch-cost-hpa-min1.yaml: test sessions, not traffic).
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

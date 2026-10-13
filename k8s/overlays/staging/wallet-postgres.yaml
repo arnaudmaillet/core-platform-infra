@@ -1,15 +1,20 @@
 # Wallet ledger PostgreSQL via CloudNativePG (core-platform-backend #665).
 # namePrefix -> staging-wallet-postgres; CNPG exposes staging-wallet-postgres-rw:5432 and a
 # staging-wallet-postgres-app Secret (key `uri`) wired into wallet-server (see
-# patch-wallet-db.yaml). TIER-0 ledger: same HA, anti-affinity and backup posture
-# as the other fleet clusters; the backup IRSA trust lists
+# patch-wallet-db.yaml). TIER-0 ledger: same anti-affinity and backup posture as the
+# other fleet clusters (one instance in staging, see below); the backup IRSA trust lists
 # "default:staging-wallet-postgres" (security/irsa-roles).
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: wallet-postgres
 spec:
-  instances: 2
+  # Staging cost: one instance (no standby). A lost node restarts it on a
+  # database node in the same AZ (its EBS volume is zonal); prod keeps a standby.
+  instances: 1
+  # A single instance's primary PDB (minAvailable 1) would block every drain of
+  # its node (spot reclaim, node-group teardown): off in staging.
+  enablePDB: false
   imageName: ghcr.io/cloudnative-pg/postgresql:16
   bootstrap:
     initdb:

@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./README.md
-  source_sha256: e0d49e621b8b6682a51e2a14c93ca592ef5de09ae865ced4fafd4a65d696f502
-  translated_at: 2026-10-12
+  source_sha256: 6b372b3654f97f4fda5bd0fd86ebf8b6c83cecf05b4680f5155fdfb5569812e9
+  translated_at: 2026-10-13
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`README.md`](./README.md) fait foi.
@@ -84,6 +84,18 @@ Tous les environnements ciblent le compte AWS `724772065879` / `us-east-1`, part
 **Modules** (`infrastructure/modules/`) : `networking/{vpc,route53}`, `eks`, `artifacts/ecr`, `security/irsa-roles`, `kubernetes/argocd`, `elasticache`, `msk`, `opensearch`, `s3-bucket` (générique ; paramètre Object-Lock), `kms-key`.
 
 **Politique de version Kubernetes.** Le control plane est épinglé dans `modules/eks` (`cluster_version`, actuellement **1.36**) et doit rester sur une version en support *standard* EKS : une version en support étendu est facturée 0,60 USD/h au lieu de 0,10 (6x — juillet 2026 a payé exactement cela sur 1.31), et à la fin du support étendu AWS met à jour le control plane de force, à un moment non annoncé. Vérifier `aws eks describe-cluster-versions` avant la date de fin de support standard de la version épinglée (1.36 : 2027-08-02) et monter de version en même temps que les pins de la plateforme qui conditionnent une mineure (version minimale de Karpenter par mineure k8s, KEDA, CNPG, ESO, cert-manager). Staging fixe la politique de mise à jour du cluster à `STANDARD` (mise à jour automatique en fin de support standard, les frais de support étendu ne peuvent jamais courir sur un environnement jetable) ; prod garde `EXTENDED` pour que ses mises à jour restent pilotées.
+
+**Profil de coût du staging (sessions de test, < 1 USD/h).** Le staging est monté pour des sessions de test puis démonté, donc il tourne au plus juste. Il coûte **≈ 0,9 USD/h** (prix catalogue us-east-1 approximatifs ; ≈ 1,4 avant) :
+- le groupe de nœuds `database` en **SPOT** (plusieurs types 2 vCPU / 8 Gio ; `system` reste on-demand pour le contrôleur Karpenter) ;
+- chaque HPA à **1** minimum et les Deployments sans HPA à 1 réplique, avec des PDB à `maxUnavailable: 1` pour qu'un pod seul ne bloque jamais un drain ;
+- CNPG à **1 instance** par cluster ;
+- ElastiCache à **1 shard × 1 réplique** ;
+- OpenSearch à **1 nœud** ;
+- les brokers MSK à **10 Gio** ;
+- **pas de logs du control plane EKS** dans CloudWatch ;
+- les ingress ArgoCD et Grafana partagent **un seul ALB** (`group.name: core-platform-admin` ; celui-ci vaut aussi pour la prod).
+
+Scylla garde **3 membres** (RF 3 + `LOCAL_QUORUM`), et MSK garde 2 brokers (un par AZ). La prod n'applique rien de tout cela : son overlay, son `env.hcl` et ses unités gardent leur propre dimensionnement. Le plus gros levier reste de **démonter le staging à temps** : un week-end oublié ≈ 45 USD.
 
 **Arbre Terragrunt live** (`infrastructure/live/<env>/us-east-1/`) : `networking/vpc → eks → data/{msk,elasticache,opensearch,media-bucket,audit-kms,audit-worm} → security/irsa-roles → kubernetes/argocd`. L'état distant (S3 + fichier de verrou) et les providers sont générés centralement par `root.hcl`. `global/artifacts/ecr` est la liste de registre faisant autorité, partagée au niveau du compte (tous les binaires de la flotte + `migrator` + `topic-provisioner`). La CI ne conserve *aucun* cache de build côté registre (les artefacts compilés sont mis en cache côté runner, sur le cache GitHub Actions), ECR ne reçoit donc que des push d'images — la ligne d'egress de juillet 2026 (83,55 USD de `DataTransfer-Out` ECR dus à un cache BuildKit par binaire) ne peut pas se reproduire. Chaque dépôt porte une **politique de cycle de vie tenant compte des tags** (`modules/artifacts/ecr`) : une image taguée `staging`/`prod` n'expire jamais, les `retained_generations` (5 par défaut) manifests `:<git-sha>` et images par architecture les plus récents sont conservés, les restes non tagués expirent après un jour — la rétention se compte en générations de la fleet, et un `git revert` d'un pin ne fonctionne que dans cette fenêtre.
 

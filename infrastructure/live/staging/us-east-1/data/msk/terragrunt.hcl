@@ -44,6 +44,9 @@ inputs = {
   # the topic-provisioner Job in lockstep with this RF.
   default_replication_factor = 2
   min_insync_replicas        = 1
+  # Staging cost: 10 GiB per broker (module default 50) is plenty for test
+  # traffic at the registry's retentions. PROD => omit.
+  broker_ebs_volume_size = 10
 
   # Disposable staging: drop the secret immediately on destroy so a rebuild
   # doesn't collide with the SCRAM secret name's recovery window. PROD => omit

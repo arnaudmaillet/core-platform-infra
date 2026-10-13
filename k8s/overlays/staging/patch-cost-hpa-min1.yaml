@@ -1,0 +1,8 @@
+# k8s/overlays/staging/patch-cost-hpa-min1.yaml
+#
+# Staging cost: every HPA floors at 1 replica (base 2). Staging serves test
+# sessions, not traffic: one pod per service is enough, and the HPA still
+# scales out under load (soak tests). PROD keeps the base / its own patches.
+- op: replace
+  path: /spec/minReplicas
+  value: 1

@@ -73,6 +73,18 @@ All environments target AWS account `724772065879` / `us-east-1`, sharing one EC
 
 **Kubernetes version policy.** The control plane is pinned in `modules/eks` (`cluster_version`, currently **1.36**) and must stay on a version in EKS *standard* support: a version in extended support is billed 0.60 USD/h instead of 0.10 (6x — July 2026 paid exactly that on 1.31), and at the end of extended support AWS force-upgrades the control plane at an unannounced time. Check `aws eks describe-cluster-versions` before the pinned version's end-of-standard-support date (1.36: 2027-08-02) and bump together with the platform pins that gate a minor (Karpenter's minimum per k8s minor, KEDA, CNPG, ESO, cert-manager). Staging sets the cluster upgrade policy to `STANDARD` (auto-upgrade at end of standard support, extended-support fees can never accrue on a disposable env); prod keeps `EXTENDED` so its upgrades stay piloted.
 
+**Staging cost profile (test sessions, < 1 USD/h).** Staging is brought up for test sessions and torn down after, so it runs lean. It costs **≈ 0.9 USD/h** (approximate us-east-1 list prices; it was ≈ 1.4):
+- the `database` node group on **SPOT** (several 2 vCPU / 8 GiB types; `system` stays on-demand for the Karpenter controller);
+- every HPA floored at **1** and the Deployments without an HPA at 1 replica, with PDBs at `maxUnavailable: 1` so a single pod never blocks a drain;
+- CNPG at **1 instance** per cluster;
+- ElastiCache at **1 shard × 1 replica**;
+- OpenSearch at **1 node**;
+- MSK brokers at **10 GiB**;
+- **no EKS control-plane logs** in CloudWatch;
+- the ArgoCD and Grafana ingresses share **one ALB** (`group.name: core-platform-admin`; this one applies to prod too).
+
+Scylla keeps **3 members** (RF 3 + `LOCAL_QUORUM`), and MSK keeps 2 brokers (one per AZ). Prod sets none of these: its overlay, `env.hcl` and units keep their own sizing. The biggest lever is still **tearing staging down on time**: a forgotten weekend ≈ 45 USD.
+
 **Terragrunt live tree** (`infrastructure/live/<env>/us-east-1/`): `networking/vpc → eks → data/{msk,elasticache,opensearch,media-bucket,audit-kms,audit-worm} → security/irsa-roles → kubernetes/argocd`. Remote state (S3 + lockfile) and providers are generated centrally by `root.hcl`. `global/artifacts/ecr` is the account-shared, authoritative registry list (all fleet binaries + `migrator` + `topic-provisioner`). CI keeps *no* registry-side build cache at all (compiled artifacts are cached runner-side, on the GitHub Actions cache), so ECR only ever receives image pushes — the July 2026 egress line (83.55 USD of ECR `DataTransfer-Out` from a per-binary BuildKit cache) cannot recur. Each repository carries a **tag-aware lifecycle policy** (`modules/artifacts/ecr`): an image tagged `staging`/`prod` is never expired, the newest `retained_generations` (default 5) `:<git-sha>` manifests and per-arch images are kept, untagged leftovers expire after a day — retention is counted in fleet generations, and a `git revert` of a pin only works within that window.
 
 ### 2.3 Managed data stores (staging)

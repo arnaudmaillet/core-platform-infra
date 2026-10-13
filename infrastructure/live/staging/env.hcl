@@ -38,13 +38,19 @@ locals {
       iam_role_name            = "core-platform-staging-node-role"
     }
     database = {
-      instance_types = ["t3.large"]
+      # SPOT (staging cost, ~0.03 vs 0.083 USD/h per node): Scylla's RF 3 /
+      # LOCAL_QUORUM rides out one reclaimed member, CNPG restarts the instance
+      # on the replacement node (same AZ, its EBS volume follows). Several
+      # 2 vCPU / 8 GiB x86 types so a reclaim finds capacity. `system` stays
+      # on-demand: it hosts the Karpenter controller. PROD => on-demand.
+      capacity_type  = "SPOT"
+      instance_types = ["t3.large", "t3a.large", "m5.large", "m5a.large", "m6i.large"]
       ami_type       = "AL2023_x86_64_STANDARD"
       # 3 nodes: one per Scylla member — the fleet's keyspaces are created at
       # NetworkTopologyStrategy RF 3 (per-service migrations) and every write
       # is LOCAL_QUORUM, so fewer than 2 live members fails ALL writes (found
       # live: the first soak's 6,850 CreatePost calls all failed on a 1-node
-      # Scylla). CNPG's 12 instances also breathe easier across 3 nodes.
+      # Scylla). CNPG's 7 single-instance clusters share them.
       min_size     = 3
       max_size     = 5
       desired_size = 3

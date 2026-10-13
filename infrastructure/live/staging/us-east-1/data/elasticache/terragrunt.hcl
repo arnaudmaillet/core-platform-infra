@@ -38,6 +38,12 @@ inputs = {
   # rebuild doesn't collide with its recovery window. PROD => omit (recoverable).
   secret_recovery_window_days = 0
 
+  # Staging cost: 1 shard x (primary + 1 replica) = 2 cache.t4g.small instead of
+  # the module default 2 x 2. Still cluster mode, so the client path is the
+  # same as prod's; the replica keeps Multi-AZ failover valid. PROD => omit.
+  num_node_groups         = 1
+  replicas_per_node_group = 1
+
   tags = {
     Environment = local.env_vars.locals.env
     ManagedBy   = "terragrunt"

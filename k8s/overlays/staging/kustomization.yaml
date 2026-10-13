@@ -190,7 +190,25 @@ images:
   - name: core-platform-realtime-dispatcher
     newName: 724772065879.dkr.ecr.us-east-1.amazonaws.com/core-platform-realtime-dispatcher
     newTag: 38debae6f21c0491ceeeebc98dfdd4cb5f4552e1
+# Staging cost (one replica per service at rest): the Deployments without an
+# HPA, here; the HPA floors and PDBs, in the patch-cost-* patches below.
+replicas:
+  - { name: chat-server, count: 1 }
+  - { name: comment-server, count: 1 }
+  - { name: engagement-server, count: 1 }
+  - { name: geo-discovery-server, count: 1 }
+  - { name: notification-server, count: 1 }
+  - { name: post-server, count: 1 }
+  - { name: profile-server, count: 1 }
+  - { name: social-graph-server, count: 1 }
+  - { name: timeline-server, count: 1 }
 patches:
+  - path: patch-cost-hpa-min1.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+  - path: patch-cost-pdb.yaml
+    target:
+      kind: PodDisruptionBudget
   # Baseline pod-security hardening (non-root, seccomp, drop caps) on every Deployment.
   - path: patch-securitycontext.yaml
     target:

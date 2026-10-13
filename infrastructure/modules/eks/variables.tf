@@ -67,3 +67,9 @@ variable "node_groups" {
   description = "Map complète des Managed Node Groups (passée par Terragrunt)"
   type        = any
 }
+
+variable "cluster_enabled_log_types" {
+  description = "EKS control-plane log types shipped to CloudWatch (api, audit, authenticator, controllerManager, scheduler). [] turns them off and skips the log group."
+  type        = list(string)
+  default     = ["audit", "api", "authenticator"]
+}

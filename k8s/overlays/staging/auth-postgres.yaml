@@ -10,7 +10,12 @@ kind: Cluster
 metadata:
   name: auth-postgres
 spec:
-  instances: 2
+  # Staging cost: one instance (no standby). A lost node restarts it on a
+  # database node in the same AZ (its EBS volume is zonal); prod keeps a standby.
+  instances: 1
+  # A single instance's primary PDB (minAvailable 1) would block every drain of
+  # its node (spot reclaim, node-group teardown): off in staging.
+  enablePDB: false
   imageName: ghcr.io/cloudnative-pg/postgresql:16
   bootstrap:
     initdb:
