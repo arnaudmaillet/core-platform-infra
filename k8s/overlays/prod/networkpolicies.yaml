@@ -62,7 +62,7 @@ spec:
           - profile-server      # mesh callee  (search, auth, moderation, account, notification)
           - moderation-server   # mesh callee  (media Screen, account)
           - wallet-server       # mesh callee  (geo-discovery, account) — TIER-0 ledger
-          - media-server        # mesh callee  (account, profile) — mints private-document links
+          - media-server        # mesh callee  (account, profile, post, chat) — mints private-document links
           - auth-server         # mesh callee  (realtime JWKS)
           - audit-server        # TIER-0 — no normal-flow mesh ingress
           - audit-worker        # worker — Kafka consumer, health only
@@ -249,8 +249,11 @@ spec:
 # media-server: GetPrivateDocumentUrl (mesh-only) signs a link to anyone's ID
 # document, and NetworkPolicy is L4 (no per-RPC scoping), so media's mesh port
 # takes ONLY the callers that need media (#37): account (GDPR export,
-# ListAssetsByOwner) and profile (verification documents, GetAsset). A staff
-# caller gate in media is the proper fix (tracked backend-side).
+# ListAssetsByOwner), profile (verification documents, GetAsset), post and chat
+# (attachment / message assets: GetAsset, BatchResolveDelivery,
+# ChangeDeliveryVisibility; #88, #89). A staff caller gate in media is the
+# proper fix (tracked backend-side); ChangeDeliveryVisibility is already gated
+# to post/chat by the mesh caller gate (media.env).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -264,7 +267,7 @@ spec:
     - from:
         - podSelector:
             matchExpressions:
-              - { key: app, operator: In, values: [account-server, profile-server] }
+              - { key: app, operator: In, values: [account-server, profile-server, post-server, chat-server] }
       ports:
         - { protocol: TCP, port: 50063 }
 ---

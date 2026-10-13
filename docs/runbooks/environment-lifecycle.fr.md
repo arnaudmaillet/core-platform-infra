@@ -1,8 +1,8 @@
 ---
 i18n:
   source: ./environment-lifecycle.md
-  source_sha256: bd8bc093437361b8dc9a69f9c5c68ca46e56658a702cd40af01da4d89b59e05c
-  translated_at: 2026-10-12
+  source_sha256: be44af9df80d1762ce0ab05c09e28e31b52e46a1148ede91aa402c2377b00533
+  translated_at: 2026-10-13
   status: complete
 ---
 > 🇫🇷 Traduction française — la version **anglaise** [`environment-lifecycle.md`](./environment-lifecycle.md) fait foi.
@@ -240,6 +240,7 @@ cluster en marche, lisez `retention.ms` avec
 | Interrupteur (service) | À activer quand | Terminé quand les pods journalisent | Ensuite |
 |---|---|---|---|
 | `PROFILE_BACKFILL_TAB_SETTINGS=true` (profile-server ; core-platform-infra#66, backend #873/#877) | l'env contient déjà des profils dont les réglages d'onglets ont changé **avant** la rétention de `profile.v1.events`, au moment où post / engagement consomment `ProfileTabSettingsChanged` pour la première fois | `tab settings backfill done` | retirez la variable au commit suivant. Chaque réplique la relance à chaque démarrage : sans danger (le dernier écrit gagne) mais charge N× le topic, et une ancienne valeur peut écraser une plus récente si des titulaires modifient leurs réglages entre-temps |
+| `PROFILE_BACKFILL_VISIBILITY=true` (profile-server ; core-platform-infra#88, backend #927/#929) | l'env contient déjà des profils **privés** au moment où post → media est activé (`POST_MEDIA_GRPC_ENDPOINT` défini) : il les ré-annonce pour que post passe leurs images en SIGNED | `visibility backfill done` | retirez la variable au commit suivant (mêmes réserves que ci-dessus) |
 
 Procédure : ajoutez la variable à `k8s/overlays/<env>/profile.env` dans sa propre
 PR, laissez ArgoCD redéployer profile-server, attendez la ligne de log, puis une

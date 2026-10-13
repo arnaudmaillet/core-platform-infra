@@ -20,3 +20,6 @@ subjects:
   - kind: ServiceAccount
     name: wallet-server
     namespace: default
+  - kind: ServiceAccount
+    name: media-server
+    namespace: default

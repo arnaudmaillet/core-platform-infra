@@ -231,7 +231,7 @@ patches:
   - path: patch-mesh-caller-token.yaml
     target:
       kind: Deployment
-      labelSelector: "app in (account-server,geo-discovery-server)"
+      labelSelector: "app in (account-server,geo-discovery-server,post-server,chat-server)"
   - path: patch-backend-creds.yaml
     target:
       kind: Deployment
